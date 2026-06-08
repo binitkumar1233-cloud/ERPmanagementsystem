@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" width="320" height="72" role="img" aria-label="EduManage – School and College ERP System">
+  <defs>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="72" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="60%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon background -->
+  <rect x="0" y="0" width="72" height="72" rx="18" fill="url(#iconGrad)"/>
+  <!-- Gloss overlay -->
+  <rect x="0" y="0" width="72" height="36" rx="18" fill="url(#shineGrad)"/>
+  <rect x="0" y="18" width="72" height="18" fill="url(#shineGrad)"/>
+
+  <!-- Graduation cap: mortarboard top (diamond) -->
+  <polygon points="36,14 56,24 36,34 16,24" fill="white"/>
+
+  <!-- Cap body / helmet part -->
+  <path d="M22,34 L22,46 C22,50 36,53 36,53 C36,53 50,50 50,46 L50,34 L36,42 Z" fill="rgba(255,255,255,0.88)"/>
+
+  <!-- Brim ellipse -->
+  <ellipse cx="36" cy="53" rx="14" ry="3.5" fill="rgba(255,255,255,0.42)"/>
+
+  <!-- Tassel cord -->
+  <line x1="56" y1="24" x2="56" y2="42" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+  <!-- Tassel end dot (gold) -->
+  <circle cx="56" cy="44.5" r="3.5" fill="#fbbf24"/>
+  <circle cx="56" cy="44.5" r="1.8" fill="#f59e0b"/>
+
+  <!-- Brand name -->
+  <text
+    x="90" y="34"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="800"
+    font-size="26"
+    fill="#0f172a"
+    letter-spacing="-0.5">Edu</text>
+  <text
+    x="138" y="34"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="800"
+    font-size="26"
+    fill="#1e3a8a"
+    letter-spacing="-0.5">Manage</text>
+
+  <!-- ERP pill badge -->
+  <rect x="90" y="42" width="30" height="17" rx="5" fill="#dbeafe"/>
+  <text
+    x="105" y="54"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
+    font-weight="700"
+    font-size="9"
+    fill="#1e3a8a"
+    text-anchor="middle"
+    letter-spacing="0.5">ERP</text>
+
+  <!-- Subtitle -->
+  <text
+    x="128" y="54"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="500"
+    font-size="11.5"
+    fill="#64748b"
+    letter-spacing="0.2">School &amp; College Management</text>
+</svg>
