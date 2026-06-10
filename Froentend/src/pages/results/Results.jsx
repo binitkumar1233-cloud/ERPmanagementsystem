@@ -317,8 +317,9 @@ export default function Results() {
     const clearAll  = ()=>{ setNameQ(''); setRegQ(''); setDobQ(''); setSF('All'); setCF('All'); setSemF('All'); };
 
     return (
+        <>
+        {certStudent && <Certificate student={certStudent} onClose={() => setCertStudent(null)} />}
         <div className="erp-page">
-            {certStudent && <Certificate student={certStudent} onClose={() => setCertStudent(null)} />}
             <Navbar title="Results & Analytics" subtitle="Academic performance and grade reports" />
 
             {/* ── Hero KPI Cards ── */}
@@ -701,6 +702,7 @@ export default function Results() {
                 }
             `}</style>
         </div>
+        </>
     );
 }
 
