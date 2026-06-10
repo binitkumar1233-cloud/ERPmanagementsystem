@@ -2,7 +2,7 @@ const router = require('express').Router();
 const Attendance = require('../models/Attendance');
 const { protect } = require('../middleware/auth');
 const log = require('../middleware/logger');
-const { broadcastStats, broadcastNotification } = require('../socket');
+const { broadcastStats, broadcastNotification, broadcastActivity } = require('../socket');
 
 router.use(protect);
 
@@ -17,6 +17,7 @@ router.post('/bulk', log('Marked attendance', 'Attendance'), async (req, res, ne
         const result = await Attendance.insertMany(enriched, { ordered: false });
         broadcastStats();
         broadcastNotification('attendance_marked', `Attendance marked for ${result.length} student(s)`, { count: result.length });
+        broadcastActivity('attendance', `Attendance marked for ${result.length} student(s)`);
         res.status(201).json({ success: true, count: result.length, message: 'Attendance marked' });
     } catch (err) { next(err); }
 });

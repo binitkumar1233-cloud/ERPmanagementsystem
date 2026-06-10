@@ -2,7 +2,7 @@ const router = require('express').Router();
 const Student = require('../models/Student');
 const { protect } = require('../middleware/auth');
 const log = require('../middleware/logger');
-const { broadcastStats, broadcastNotification } = require('../socket');
+const { broadcastStats, broadcastNotification, broadcastActivity } = require('../socket');
 
 router.use(protect);
 
@@ -65,6 +65,7 @@ router.post('/', log('Added new student', 'Students'), async (req, res, next) =>
         const student = await Student.create(req.body);
         broadcastStats();
         broadcastNotification('student_added', `New student added: ${student.name}`, { id: student._id, name: student.name });
+        broadcastActivity('student', `${student.name} enrolled in ${student.course || 'a course'}`);
         res.status(201).json({ success: true, data: student, message: 'Student added successfully' });
     } catch (err) { next(err); }
 });
@@ -76,6 +77,7 @@ router.put('/:id', log('Updated student record', 'Students'), async (req, res, n
         if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
         broadcastStats();
         broadcastNotification('student_updated', `Student record updated: ${student.name}`, { id: student._id });
+        broadcastActivity('student', `Student record updated: ${student.name}`);
         res.json({ success: true, data: student, message: 'Student updated successfully' });
     } catch (err) { next(err); }
 });
@@ -87,6 +89,7 @@ router.delete('/:id', log('Deleted student record', 'Students'), async (req, res
         if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
         broadcastStats();
         broadcastNotification('student_deleted', `Student removed: ${student.name}`, { id: student._id });
+        broadcastActivity('student', `Student removed from records: ${student.name}`);
         res.json({ success: true, message: 'Student deleted successfully' });
     } catch (err) { next(err); }
 });

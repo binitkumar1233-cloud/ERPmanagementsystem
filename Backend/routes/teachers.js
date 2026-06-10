@@ -2,6 +2,7 @@ const router = require('express').Router();
 const Teacher = require('../models/Teacher');
 const { protect } = require('../middleware/auth');
 const log = require('../middleware/logger');
+const { broadcastStats, broadcastNotification, broadcastActivity } = require('../socket');
 
 router.use(protect);
 
@@ -48,6 +49,9 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', log('Added new teacher', 'Teachers'), async (req, res, next) => {
     try {
         const teacher = await Teacher.create(req.body);
+        broadcastStats();
+        broadcastNotification('teacher_added', `New teacher added: ${teacher.name}`, { id: teacher._id, name: teacher.name });
+        broadcastActivity('teacher', `${teacher.name} joined as ${teacher.designation || 'Faculty'} — ${teacher.dept || 'Dept'}`);
         res.status(201).json({ success: true, data: teacher, message: 'Teacher added successfully' });
     } catch (err) { next(err); }
 });
@@ -57,6 +61,9 @@ router.put('/:id', log('Updated teacher record', 'Teachers'), async (req, res, n
     try {
         const teacher = await Teacher.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!teacher) return res.status(404).json({ success: false, message: 'Teacher not found' });
+        broadcastStats();
+        broadcastNotification('teacher_updated', `Teacher record updated: ${teacher.name}`, { id: teacher._id });
+        broadcastActivity('teacher', `Teacher profile updated: ${teacher.name}`);
         res.json({ success: true, data: teacher, message: 'Teacher updated successfully' });
     } catch (err) { next(err); }
 });
@@ -66,6 +73,9 @@ router.delete('/:id', log('Deleted teacher record', 'Teachers'), async (req, res
     try {
         const teacher = await Teacher.findByIdAndDelete(req.params.id);
         if (!teacher) return res.status(404).json({ success: false, message: 'Teacher not found' });
+        broadcastStats();
+        broadcastNotification('teacher_deleted', `Teacher removed: ${teacher.name}`, { id: teacher._id });
+        broadcastActivity('teacher', `Teacher record removed: ${teacher.name}`);
         res.json({ success: true, message: 'Teacher deleted successfully' });
     } catch (err) { next(err); }
 });

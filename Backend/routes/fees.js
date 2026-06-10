@@ -3,7 +3,7 @@ const { FeeStructure, FeeRecord } = require('../models/Fee');
 const Student = require('../models/Student');
 const { protect } = require('../middleware/auth');
 const log = require('../middleware/logger');
-const { broadcastStats, broadcastNotification } = require('../socket');
+const { broadcastStats, broadcastNotification, broadcastActivity } = require('../socket');
 
 router.use(protect);
 
@@ -63,6 +63,7 @@ router.post('/', log('Collected fee payment', 'Fees'), async (req, res, next) =>
         }
         broadcastStats();
         broadcastNotification('fee_collected', `Fee payment recorded: ₹${record.amount}`, { amount: record.amount, status: record.status });
+        broadcastActivity('fee', `Fee payment of ₹${record.amount?.toLocaleString('en-IN')} recorded (${record.status})`);
         res.status(201).json({ success: true, data: record, message: 'Fee recorded successfully' });
     } catch (err) { next(err); }
 });

@@ -1,16 +1,52 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCountUp } from '../../hooks/useCountUp.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { AuthContext } from '../../context/AuthContext.jsx';
+import { useSocket } from '../../context/SocketContext.jsx';
+import { api } from '../../services/api.js';
 import {
     GraduationCap, Users, BookOpen, TrendingUp,
     ArrowUpRight, ArrowDownRight, CreditCard,
     CheckCircle, AlertTriangle, Calendar, Award, Clock,
     ChevronRight, Bell, Zap, Activity, Building2,
     UserPlus, FileText, BarChart3, Star, MapPin,
-    BookMarked, Target, PieChart, Layers, Globe,
+    BookMarked, Target, PieChart, Layers, Globe, Wifi,
 } from 'lucide-react';
+
+/* Icon + colour mapping for live activity entities */
+const ENTITY_CFG = {
+    student:    { icon: GraduationCap, color: '#2563eb', bg: 'rgba(37,99,235,0.10)'  },
+    teacher:    { icon: Users,         color: '#059669', bg: 'rgba(5,150,105,0.10)'  },
+    fee:        { icon: CreditCard,    color: '#d97706', bg: 'rgba(217,119,6,0.10)'  },
+    attendance: { icon: CheckCircle,   color: '#0284c7', bg: 'rgba(2,132,199,0.10)'  },
+    admission:  { icon: UserPlus,      color: '#7c3aed', bg: 'rgba(124,58,237,0.10)' },
+    result:     { icon: BarChart3,     color: '#dc2626', bg: 'rgba(220,38,38,0.10)'  },
+};
+
+/* Normalise API student → dashboard student shape */
+const AVATAR_COLORS = ['#2563eb','#059669','#7c3aed','#dc2626','#d97706','#0284c7'];
+function normaliseStudent(s, i) {
+    return {
+        id: s.studentId || s.id || String(s._id).slice(-6).toUpperCase(),
+        name: s.name,
+        course: s.course || '—',
+        year: s.year || s.semester || '—',
+        campus: s.campus || 'Main',
+        status: s.status || 'Active',
+        fees: s.fees || 'Pending',
+        cgpa: s.cgpa || s.gpa || '—',
+        avatar: s.avatar || AVATAR_COLORS[i % AVATAR_COLORS.length],
+    };
+}
+
+/* Format a raw INR number → ₹1.2L / ₹45K */
+function fmtFee(n) {
+    if (!n && n !== 0) return '—';
+    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+    if (n >= 1000)   return `₹${(n / 1000).toFixed(1)}K`;
+    return `₹${n}`;
+}
 
 /* ═══════════════════════════════════════
    MULTI-CAMPUS DATA
@@ -152,19 +188,69 @@ function KpiCard({ label, value, sub, icon: Icon, color, bg, border }) {
 export default function Dashboard() {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
-    const [campus, setCampus] = useState('all');
+    const [campus, setCampus]     = useState('all');
     const [reportTab, setReportTab] = useState('subject');
+    const [recentStudents, setRecentStudents] = useState(STUDENTS.map(normaliseStudent));
+    const [statsUpdated, setStatsUpdated] = useState(false);
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     const firstName = user?.name?.split(' ')[0] || 'Admin';
     const cs = CAMPUS_STATS[campus];
 
+    /* ── Live socket data ── */
+    const { connected, stats: liveStats, liveActivity } = useSocket();
+
+    /* Overlay live values from socket when connected */
+    const liveStudents  = connected && liveStats ? liveStats.totalStudents  : null;
+    const liveFaculty   = connected && liveStats ? liveStats.totalTeachers  : null;
+    const liveAttPct    = connected && liveStats ? liveStats.attendancePct  : null;
+    const liveFeePend   = connected && liveStats ? liveStats.totalFeePending : null;
+    const livePendCount = connected && liveStats ? Math.max(1, Math.round(liveStats.totalFeePending / 5000)) : null;
+
+    /* Flash animation when stats update */
+    useEffect(() => {
+        if (!liveStats) return;
+        setStatsUpdated(true);
+        const t = setTimeout(() => setStatsUpdated(false), 800);
+        return () => clearTimeout(t);
+    }, [liveStats]);
+
+    /* Fetch real students on mount */
+    useEffect(() => {
+        api.get('/students?limit=6')
+            .then(res => { if (res.data?.length) setRecentStudents(res.data.map(normaliseStudent)); })
+            .catch(() => {});
+    }, []);
+
+    /* Refresh students table whenever a student activity arrives */
+    useEffect(() => {
+        const last = liveActivity[0];
+        if (last?.entity === 'student') {
+            api.get('/students?limit=6')
+                .then(res => { if (res.data?.length) setRecentStudents(res.data.map(normaliseStudent)); })
+                .catch(() => {});
+        }
+    }, [liveActivity]);
+
+    /* Merge live activity with static fallback feed */
+    const activityFeed = [
+        ...liveActivity.slice(0, 5).map(a => ({
+            icon: ENTITY_CFG[a.entity]?.icon || Activity,
+            text: a.text,
+            time: 'Just now',
+            color: ENTITY_CFG[a.entity]?.color || '#6366f1',
+            bg: ENTITY_CFG[a.entity]?.bg || 'rgba(99,102,241,0.10)',
+            isLive: true,
+        })),
+        ...ACTIVITY,
+    ].slice(0, 7);
+
     const heroCards = [
-        { label: 'Total Students',  value: cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(145deg,#1e1b4b 0%,#3730a3 40%,#4f46e5 75%,#818cf8 100%)', glow: 'rgba(79,70,229,0.42)', sub: 'Across selected campus' },
-        { label: 'Faculty Members', value: cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(145deg,#022c22 0%,#065f46 40%,#059669 75%,#34d399 100%)', glow: 'rgba(16,185,129,0.42)', sub: 'All departments' },
-        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(145deg,#2e1065 0%,#5b21b6 40%,#7c3aed 75%,#a78bfa 100%)', glow: 'rgba(139,92,246,0.42)', sub: 'Current semester' },
-        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(145deg,#451a03 0%,#92400e 40%,#d97706 75%,#fbbf24 100%)', glow: 'rgba(245,158,11,0.42)', sub: 'Above national avg' },
+        { label: 'Total Students',  value: liveStudents ?? cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(145deg,#1e1b4b 0%,#3730a3 40%,#4f46e5 75%,#818cf8 100%)', glow: 'rgba(79,70,229,0.42)', sub: connected ? '● Live · all campuses' : 'Across selected campus', live: liveStudents !== null },
+        { label: 'Faculty Members', value: liveFaculty  ?? cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(145deg,#022c22 0%,#065f46 40%,#059669 75%,#34d399 100%)', glow: 'rgba(16,185,129,0.42)', sub: connected ? '● Live · all departments' : 'All departments', live: liveFaculty !== null },
+        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(145deg,#2e1065 0%,#5b21b6 40%,#7c3aed 75%,#a78bfa 100%)', glow: 'rgba(139,92,246,0.42)', sub: 'Current semester', live: false },
+        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(145deg,#451a03 0%,#92400e 40%,#d97706 75%,#fbbf24 100%)', glow: 'rgba(245,158,11,0.42)', sub: 'Above national avg', live: false },
     ];
 
     return (
@@ -190,6 +276,17 @@ export default function Dashboard() {
                     ))}
                 </div>
                 <div style={S.campusRight}>
+                    {connected ? (
+                        <span style={S.livePill}>
+                            <span style={S.livePillDot} />
+                            Live Data
+                        </span>
+                    ) : (
+                        <span style={S.offlinePill}>
+                            <Wifi size={10} />
+                            Demo Mode
+                        </span>
+                    )}
                     <span style={S.campusAY}>Academic Year 2026–27</span>
                     <span style={S.campusSem}>· Semester IV</span>
                 </div>
@@ -205,8 +302,8 @@ export default function Dashboard() {
             {/* ── KPI Strip ── */}
             <div style={S.kpiGrid}>
                 {[
-                    { label: 'Attendance Today', value: cs.attendance,     sub: `${cs.students} enrolled`,     icon: CheckCircle,  color:'#059669', bg:'rgba(16,185,129,0.09)',  border:'rgba(16,185,129,0.22)' },
-                    { label: 'Fees Pending',      value: cs.feesPending,   sub: `${cs.pendingCount} students`, icon: AlertTriangle,color:'#d97706', bg:'rgba(245,158,11,0.09)',  border:'rgba(245,158,11,0.22)' },
+                    { label: 'Attendance Today', value: liveAttPct  != null ? `${liveAttPct}%` : cs.attendance,  sub: liveStats ? `${liveStats.presentToday}/${liveStats.totalToday} present` : `${cs.students} enrolled`, icon: CheckCircle,  color:'#059669', bg:'rgba(16,185,129,0.09)',  border:'rgba(16,185,129,0.22)' },
+                    { label: 'Fees Pending',      value: liveFeePend != null ? fmtFee(liveFeePend) : cs.feesPending, sub: liveStats ? `${livePendCount} students` : `${cs.pendingCount} students`, icon: AlertTriangle,color:'#d97706', bg:'rgba(245,158,11,0.09)',  border:'rgba(245,158,11,0.22)' },
                     { label: 'Exams This Week',   value: '6',              sub: '3 departments',               icon: Calendar,     color:'#7c3aed', bg:'rgba(139,92,246,0.09)',  border:'rgba(139,92,246,0.22)' },
                     { label: 'New Admissions',    value: String(cs.newAdm),sub: 'This month',                  icon: UserPlus,     color:'#0284c7', bg:'rgba(2,132,199,0.09)',   border:'rgba(2,132,199,0.22)'  },
                     { label: 'Avg. CGPA',         value: cs.cgpa,          sub: '+0.3 from last sem',          icon: Star,         color:'#dc2626', bg:'rgba(220,38,38,0.09)',   border:'rgba(220,38,38,0.22)'  },
@@ -371,7 +468,7 @@ export default function Dashboard() {
                     <div className="card-header">
                         <div>
                             <h2>Recent Admissions</h2>
-                            <p>Latest enrolled students across campuses</p>
+                            <p>{connected ? '● Live from database' : 'Latest enrolled students'}</p>
                         </div>
                         <button style={S.viewAllBtn} onClick={() => navigate('/students')}>
                             View All <ChevronRight size={13} />
@@ -391,7 +488,7 @@ export default function Dashboard() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {STUDENTS.map(s => (
+                                {recentStudents.map(s => (
                                     <tr key={s.id}>
                                         <td>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -466,14 +563,18 @@ export default function Dashboard() {
                     <div className="card">
                         <div className="card-header">
                             <div><h2>Recent Activity</h2><p>Latest system events</p></div>
+                            {connected && liveActivity.length > 0 && (
+                                <span style={S.liveTag}><span style={S.liveTagDot} />Live</span>
+                            )}
                         </div>
                         <div>
-                            {ACTIVITY.map((a, i) => {
+                            {activityFeed.map((a, i) => {
                                 const Icon = a.icon;
                                 return (
-                                    <div key={i} style={S.actRow}>
+                                    <div key={i} style={{ ...S.actRow, ...(a.isLive ? S.actRowLive : {}) }}>
+                                        {a.isLive && <span style={S.actNewBadge}>NEW</span>}
                                         <div style={{ ...S.actIcon, background: a.bg, color: a.color }}><Icon size={13} /></div>
-                                        <div>
+                                        <div style={{ flex: 1 }}>
                                             <p style={S.actText}>{a.text}</p>
                                             <p style={S.actTime}><Clock size={9} /> {a.time}</p>
                                         </div>
@@ -606,8 +707,17 @@ const S = {
     eventDate: { fontSize: '0.66rem', fontWeight: 800, minWidth: 36, textAlign: 'center' },
 
     /* Activity */
-    actRow: { display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)' },
+    actRow: { display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)', position: 'relative' },
+    actRowLive: { background: 'linear-gradient(90deg, rgba(79,70,229,0.04) 0%, transparent 80%)', animation: 'actFadeIn 0.4s ease' },
     actIcon: { width: 29, height: 29, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 },
     actText: { fontSize: '0.77rem', color: 'var(--text-secondary)', lineHeight: 1.45 },
     actTime: { fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 },
+    actNewBadge: { position: 'absolute', top: 10, right: 14, fontSize: '0.55rem', fontWeight: 800, background: 'rgba(79,70,229,0.12)', color: '#4f46e5', padding: '1px 6px', borderRadius: 4, letterSpacing: '0.06em' },
+
+    /* Live data styles */
+    livePill: { display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', fontWeight: 700, color: '#059669', background: '#d1fae5', padding: '3px 9px', borderRadius: 99 },
+    livePillDot: { width: 6, height: 6, borderRadius: '50%', background: '#059669', animation: 'pulse 1.6s ease-in-out infinite' },
+    offlinePill: { display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', background: '#f3f4f6', padding: '3px 9px', borderRadius: 99 },
+    liveTag: { display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.66rem', fontWeight: 700, color: '#059669', background: '#d1fae5', padding: '2px 8px', borderRadius: 6 },
+    liveTagDot: { width: 6, height: 6, borderRadius: '50%', background: '#059669', animation: 'pulse 1.6s ease-in-out infinite' },
 };

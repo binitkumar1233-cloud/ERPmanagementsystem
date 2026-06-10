@@ -124,6 +124,12 @@ function broadcastNotification(type, message, data = {}) {
     io.emit('notification', { type, message, data, timestamp: new Date() });
 }
 
+// Broadcast a real-time activity item (entity: 'student'|'teacher'|'fee'|'attendance'|'admission'|'result')
+function broadcastActivity(entity, text) {
+    if (!io) return;
+    io.emit('activity:new', { entity, text, timestamp: new Date() });
+}
+
 function todayStart() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -132,4 +138,7 @@ function todayStart() {
 
 function getIO() { return io; }
 
-module.exports = { initSocket, broadcastStats, broadcastNotification, getIO };
+// Auto-push updated stats to all clients every 30 s
+setInterval(() => { if (io && io.engine.clientsCount > 0) broadcastStats(); }, 30000);
+
+module.exports = { initSocket, broadcastStats, broadcastNotification, broadcastActivity, getIO };
