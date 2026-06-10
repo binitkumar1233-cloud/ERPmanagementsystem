@@ -37,26 +37,42 @@ const CAMPUS = [
 const STUDENT_PORTAL = { label: 'Student Portal', icon: UserCircle, to: '/student-login' };
 const ADMIN_PANEL    = { label: 'Admin Panel',    icon: Shield,     to: '/admin-panel'  };
 
-function NavItem({ label, icon: Icon, to, collapsed, extra = {}, activeExtra = {} }) {
+function NavItem({ label, icon: Icon, to, collapsed, accent = null }) {
     return (
         <NavLink
-            key={to}
             to={to}
             title={collapsed ? label : undefined}
             style={({ isActive }) => ({
                 ...styles.link,
-                ...extra,
-                ...(isActive ? { ...styles.linkActive, ...activeExtra } : {}),
                 ...(collapsed ? styles.linkCollapsed : {}),
+                ...(isActive
+                    ? {
+                        background: accent
+                            ? `${accent}22`
+                            : 'rgba(99, 102, 241, 0.15)',
+                        color: accent || '#a5b4fc',
+                        fontWeight: 700,
+                        borderLeft: `3px solid ${accent || '#6366f1'}`,
+                        paddingLeft: collapsed ? undefined : '9px',
+                    }
+                    : {}),
             })}
         >
-            <span style={{ ...styles.linkIcon, ...(collapsed ? styles.linkIconCollapsed : {}) }}>
+            <span style={{
+                ...styles.linkIcon,
+                ...(collapsed ? styles.linkIconCollapsed : {}),
+            }}>
                 <Icon size={17} strokeWidth={2} />
             </span>
             {!collapsed && <span style={styles.linkLabel}>{label}</span>}
-            {!collapsed && <ChevronRight size={13} style={styles.chevron} />}
+            {!collapsed && <ChevronRight size={12} style={styles.chevron} />}
         </NavLink>
     );
+}
+
+function SectionLabel({ label, collapsed }) {
+    if (collapsed) return <div style={styles.collapsedDivider} />;
+    return <p style={styles.sectionLabel}>{label}</p>;
 }
 
 export default function Sidebar() {
@@ -64,21 +80,25 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* CSS variable injection for layout shift */}
             <style>{`
-                :root {
-                    --sidebar-width: ${collapsed ? '64px' : '260px'};
-                }
-                .sidebar-transition {
-                    transition: width 0.22s cubic-bezier(0.4,0,0.2,1);
-                }
+                :root { --sidebar-width: ${collapsed ? '64px' : '260px'}; }
+                .sidebar-transition { transition: width 0.24s cubic-bezier(0.4,0,0.2,1); }
+                .sb-link:hover { background: rgba(255,255,255,0.05) !important; color: rgba(255,255,255,0.85) !important; }
             `}</style>
 
-            <aside style={{ ...styles.sidebar, width: collapsed ? 64 : 260 }} className="sidebar-transition">
-
+            <aside
+                style={{ ...styles.sidebar, width: collapsed ? 64 : 260 }}
+                className="sidebar-transition"
+            >
                 {/* ── Brand ── */}
-                <div style={{ ...styles.brand, justifyContent: collapsed ? 'center' : 'flex-start', padding: collapsed ? '18px 0' : '22px 18px 18px' }}>
-                    <Logo variant="icon" size="sm" />
+                <div style={{
+                    ...styles.brand,
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    padding: collapsed ? '18px 0' : '20px 18px 16px',
+                }}>
+                    <div style={styles.logoWrap}>
+                        <Logo variant="icon" size="sm" />
+                    </div>
                     {!collapsed && (
                         <div>
                             <div style={styles.brandName}>EduManage</div>
@@ -89,59 +109,60 @@ export default function Sidebar() {
 
                 {/* ── Collapse toggle ── */}
                 <button
-                    style={{ ...styles.collapseBtn, justifyContent: collapsed ? 'center' : 'flex-end' }}
+                    style={{
+                        ...styles.collapseBtn,
+                        justifyContent: collapsed ? 'center' : 'flex-end',
+                    }}
                     onClick={() => setCollapsed(v => !v)}
                     title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                     {collapsed
-                        ? <PanelLeftOpen size={15} color="rgba(255,255,255,0.45)" />
-                        : <><span style={styles.collapseBtnLabel}>Collapse</span><PanelLeftClose size={15} color="rgba(255,255,255,0.45)" /></>
+                        ? <PanelLeftOpen size={15} color="rgba(255,255,255,0.4)" />
+                        : (
+                            <>
+                                <span style={styles.collapseBtnLabel}>Collapse</span>
+                                <PanelLeftClose size={15} color="rgba(255,255,255,0.4)" />
+                            </>
+                        )
                     }
                 </button>
 
                 {/* ── Navigation ── */}
-                <div style={{ ...styles.navWrap, padding: collapsed ? '14px 6px 10px' : '18px 10px 10px' }}>
-                    {!collapsed && <p style={styles.sectionLabel}>Main Navigation</p>}
+                <div style={{ ...styles.navWrap, padding: collapsed ? '14px 6px 10px' : '16px 10px 10px' }}>
+
+                    <SectionLabel label="Main Navigation" collapsed={collapsed} />
                     <nav>
-                        {NAV.map(item => <NavItem key={item.to} {...item} collapsed={collapsed} />)}
+                        {NAV.map(item => (
+                            <NavItem key={item.to} {...item} collapsed={collapsed} />
+                        ))}
                     </nav>
 
-                    {!collapsed && <p style={{ ...styles.sectionLabel, marginTop: 20 }}>Admissions & Onboarding</p>}
-                    {collapsed && <div style={styles.collapsedDivider} />}
+                    <SectionLabel label="Admissions & Onboarding" collapsed={collapsed} />
                     <nav>
                         {ADMISSIONS.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed}
-                                extra={styles.admLink} activeExtra={styles.admLinkActive} />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#f59e0b" />
                         ))}
                     </nav>
 
-                    {!collapsed && <p style={{ ...styles.sectionLabel, marginTop: 20 }}>E-Learning & Assessments</p>}
-                    {collapsed && <div style={styles.collapsedDivider} />}
+                    <SectionLabel label="E-Learning & Assessments" collapsed={collapsed} />
                     <nav>
                         {ELEARNING.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed}
-                                extra={styles.eLink} activeExtra={styles.eLinkActive} />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#8b5cf6" />
                         ))}
                     </nav>
 
-                    {!collapsed && <p style={{ ...styles.sectionLabel, marginTop: 20 }}>Campus Services</p>}
-                    {collapsed && <div style={styles.collapsedDivider} />}
+                    <SectionLabel label="Campus Services" collapsed={collapsed} />
                     <nav>
                         {CAMPUS.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed}
-                                extra={styles.campusLink} activeExtra={styles.campusLinkActive} />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#06b6d4" />
                         ))}
                     </nav>
 
-                    {!collapsed && <p style={{ ...styles.sectionLabel, marginTop: 20 }}>Administration</p>}
-                    {collapsed && <div style={styles.collapsedDivider} />}
-                    <NavItem {...ADMIN_PANEL} collapsed={collapsed}
-                        extra={styles.adminLink} activeExtra={styles.adminLinkActive} />
+                    <SectionLabel label="Administration" collapsed={collapsed} />
+                    <NavItem {...ADMIN_PANEL} collapsed={collapsed} accent="#ef4444" />
 
-                    {!collapsed && <p style={{ ...styles.sectionLabel, marginTop: 20 }}>Student Access</p>}
-                    {collapsed && <div style={styles.collapsedDivider} />}
-                    <NavItem {...STUDENT_PORTAL} collapsed={collapsed}
-                        extra={styles.portalLink} activeExtra={styles.portalLinkActive} />
+                    <SectionLabel label="Student Access" collapsed={collapsed} />
+                    <NavItem {...STUDENT_PORTAL} collapsed={collapsed} accent="#10b981" />
                 </div>
 
                 {/* ── Bottom ── */}
@@ -154,7 +175,7 @@ export default function Sidebar() {
                             </NavLink>
                             <NavLink to="/support" style={({ isActive }) => ({ ...styles.bottomBtn, ...(isActive ? styles.bottomBtnActive : {}) })}>
                                 <span style={styles.bottomBtnIcon}><HelpCircle size={14} /></span>
-                                <span style={styles.bottomBtnLabel}>Help & Support</span>
+                                <span style={styles.bottomBtnLabel}>Help &amp; Support</span>
                             </NavLink>
                         </div>
                         <p style={styles.support}>Live support: +91 98765 43210</p>
@@ -186,19 +207,26 @@ const styles = {
         top: 0,
         left: 0,
         height: '100vh',
-        background: 'var(--bg-sidebar)',
+        background: 'linear-gradient(180deg, #0e1520 0%, #0c1117 50%, #0a0e18 100%)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 100,
         overflowY: 'auto',
         overflowX: 'hidden',
-        borderRight: '1px solid rgba(255,255,255,0.04)',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
     },
     brand: {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(135deg, rgba(79,70,229,0.12) 0%, transparent 100%)',
+    },
+    logoWrap: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
     },
     brandName: {
         fontFamily: 'var(--font-display)',
@@ -206,11 +234,12 @@ const styles = {
         fontWeight: 800,
         color: 'white',
         lineHeight: 1,
+        letterSpacing: '-0.01em',
     },
     brandTag: {
-        fontSize: '0.63rem',
-        color: 'rgba(255,255,255,0.35)',
-        marginTop: 3,
+        fontSize: '0.62rem',
+        color: 'rgba(255,255,255,0.32)',
+        marginTop: 4,
         letterSpacing: '0.04em',
     },
     collapseBtn: {
@@ -218,7 +247,7 @@ const styles = {
         alignItems: 'center',
         gap: 6,
         width: '100%',
-        padding: '7px 14px',
+        padding: '6px 14px',
         background: 'transparent',
         border: 'none',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
@@ -226,10 +255,10 @@ const styles = {
         transition: 'background 0.15s',
     },
     collapseBtnLabel: {
-        fontSize: '0.65rem',
-        color: 'rgba(255,255,255,0.3)',
+        fontSize: '0.62rem',
+        color: 'rgba(255,255,255,0.28)',
         fontWeight: 600,
-        letterSpacing: '0.06em',
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
         flex: 1,
         textAlign: 'right',
@@ -239,17 +268,17 @@ const styles = {
         flex: 1,
     },
     sectionLabel: {
-        fontSize: '0.62rem',
-        fontWeight: 700,
-        letterSpacing: '0.10em',
+        fontSize: '0.6rem',
+        fontWeight: 800,
+        letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.25)',
-        padding: '0 10px 10px',
+        color: 'rgba(255,255,255,0.22)',
+        padding: '14px 12px 6px',
     },
     collapsedDivider: {
         height: 1,
         background: 'rgba(255,255,255,0.06)',
-        margin: '6px 8px',
+        margin: '8px 8px',
     },
     link: {
         display: 'flex',
@@ -257,27 +286,23 @@ const styles = {
         gap: 10,
         padding: '9px 12px',
         borderRadius: 8,
-        color: 'rgba(255,255,255,0.5)',
-        fontSize: '0.85rem',
+        color: 'rgba(255,255,255,0.48)',
+        fontSize: '0.84rem',
         fontWeight: 500,
-        transition: 'all 0.18s ease',
+        transition: 'all 0.16s ease',
         textDecoration: 'none',
         marginBottom: 2,
         position: 'relative',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
+        borderLeft: '3px solid transparent',
     },
     linkCollapsed: {
         padding: '9px 0',
         justifyContent: 'center',
         gap: 0,
         borderRadius: 8,
-    },
-    linkActive: {
-        background: 'rgba(30,64,175,0.35)',
-        color: 'white',
-        fontWeight: 600,
-        border: '1px solid rgba(30,64,175,0.4)',
+        borderLeft: 'none',
     },
     linkIcon: {
         width: 32,
@@ -293,18 +318,7 @@ const styles = {
         borderRadius: 9,
     },
     linkLabel: { flex: 1 },
-    chevron: { opacity: 0.4 },
-
-    admLink:       { background: 'rgba(245,158,11,0.07)',  color: 'rgba(253,230,138,0.9)',  border: '1px solid rgba(245,158,11,0.18)', marginTop: 2 },
-    admLinkActive: { background: 'rgba(245,158,11,0.22)',  color: '#fde68a',                border: '1px solid rgba(245,158,11,0.45)', fontWeight: 600 },
-    eLink:         { background: 'rgba(124,58,237,0.06)',  color: 'rgba(196,181,253,0.85)', border: '1px solid rgba(124,58,237,0.15)', marginTop: 2 },
-    eLinkActive:   { background: 'rgba(124,58,237,0.25)',  color: '#c4b5fd',                border: '1px solid rgba(124,58,237,0.45)', fontWeight: 600 },
-    campusLink:    { background: 'rgba(14,165,233,0.07)',  color: 'rgba(125,211,252,0.85)', border: '1px solid rgba(14,165,233,0.18)', marginTop: 2 },
-    campusLinkActive:{ background:'rgba(14,165,233,0.22)', color: '#7dd3fc',                border: '1px solid rgba(14,165,233,0.45)', fontWeight: 600 },
-    adminLink:     { background: 'rgba(220,38,38,0.07)',   color: 'rgba(252,165,165,0.9)',  border: '1px solid rgba(220,38,38,0.18)', marginTop: 2 },
-    adminLinkActive:{ background:'rgba(220,38,38,0.22)',   color: '#fca5a5',                border: '1px solid rgba(220,38,38,0.45)', fontWeight: 600 },
-    portalLink:    { background: 'rgba(16,185,129,0.08)',  color: 'rgba(52,211,153,0.85)',  border: '1px solid rgba(16,185,129,0.2)',  marginTop: 4 },
-    portalLinkActive:{ background:'rgba(16,185,129,0.22)', color: '#34d399',                border: '1px solid rgba(16,185,129,0.45)', fontWeight: 600 },
+    chevron: { opacity: 0.3, flexShrink: 0 },
 
     bottom: {
         padding: '10px 10px 20px',
@@ -348,8 +362,8 @@ const styles = {
         gap: 5,
         padding: '10px 6px',
         borderRadius: 10,
-        color: 'rgba(255,255,255,0.4)',
-        background: 'rgba(255,255,255,0.05)',
+        color: 'rgba(255,255,255,0.38)',
+        background: 'rgba(255,255,255,0.04)',
         border: '1px solid rgba(255,255,255,0.07)',
         cursor: 'pointer',
         textAlign: 'center',
@@ -357,34 +371,34 @@ const styles = {
         transition: 'all 0.18s ease',
     },
     bottomBtnActive: {
-        background: 'rgba(30,64,175,0.3)',
-        border: '1px solid rgba(30,64,175,0.45)',
-        color: 'white',
+        background: 'rgba(79,70,229,0.22)',
+        border: '1px solid rgba(99,102,241,0.4)',
+        color: '#a5b4fc',
     },
     bottomBtnIcon: {
         width: 30,
         height: 30,
         borderRadius: 8,
-        background: 'rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.07)',
         display: 'grid',
         placeItems: 'center',
     },
     bottomBtnLabel: {
-        fontSize: '0.65rem',
+        fontSize: '0.63rem',
         fontWeight: 600,
         letterSpacing: '0.02em',
         lineHeight: 1,
     },
     support: {
-        fontSize: '0.72rem',
-        color: 'rgba(255,255,255,0.45)',
+        fontSize: '0.7rem',
+        color: 'rgba(255,255,255,0.38)',
         padding: '4px 12px',
         marginTop: 8,
         lineHeight: 1.4,
     },
     version: {
-        fontSize: '0.62rem',
-        color: 'rgba(255,255,255,0.2)',
+        fontSize: '0.6rem',
+        color: 'rgba(255,255,255,0.18)',
         padding: '6px 12px 0',
         letterSpacing: '0.03em',
     },
@@ -394,20 +408,20 @@ const styles = {
     },
     copyrightDivider: {
         height: 1,
-        background: 'rgba(255,255,255,0.07)',
+        background: 'rgba(255,255,255,0.06)',
         marginBottom: 8,
     },
     copyrightText: {
-        fontSize: '0.65rem',
+        fontSize: '0.63rem',
         fontWeight: 700,
-        color: 'rgba(255,255,255,0.28)',
+        color: 'rgba(255,255,255,0.22)',
         letterSpacing: '0.04em',
         margin: 0,
         lineHeight: 1.6,
     },
     copyrightSub: {
-        fontSize: '0.58rem',
-        color: 'rgba(255,255,255,0.15)',
+        fontSize: '0.56rem',
+        color: 'rgba(255,255,255,0.12)',
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
         margin: '2px 0 0',

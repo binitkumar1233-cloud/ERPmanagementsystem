@@ -161,10 +161,10 @@ export default function Dashboard() {
     const cs = CAMPUS_STATS[campus];
 
     const heroCards = [
-        { label: 'Total Students',  value: cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(135deg,#1e3a8a,#2563eb)', glow: 'rgba(37,99,235,0.32)', sub: 'Across selected campus' },
-        { label: 'Faculty Members', value: cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.32)', sub: 'All departments' },
-        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(135deg,#4c1d95,#7c3aed)', glow: 'rgba(139,92,246,0.32)', sub: 'Current semester' },
-        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(135deg,#92400e,#d97706)', glow: 'rgba(245,158,11,0.32)', sub: 'Above national avg' },
+        { label: 'Total Students',  value: cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(135deg,#312e81,#4f46e5,#6366f1)', glow: 'rgba(79,70,229,0.35)', sub: 'Across selected campus' },
+        { label: 'Faculty Members', value: cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(135deg,#064e3b,#059669,#10b981)', glow: 'rgba(16,185,129,0.35)', sub: 'All departments' },
+        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(135deg,#4c1d95,#7c3aed,#8b5cf6)', glow: 'rgba(139,92,246,0.35)', sub: 'Current semester' },
+        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(135deg,#78350f,#d97706,#f59e0b)', glow: 'rgba(245,158,11,0.35)', sub: 'Above national avg' },
     ];
 
     return (
@@ -504,8 +504,8 @@ const S = {
     campusBarLabel: { fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' },
     campusTabs: { display: 'flex', gap: 4 },
     campusTab: { display: 'flex', alignItems: 'center', gap: 5, padding: '5px 13px', borderRadius: 8, fontSize: '0.76rem', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: '1px solid transparent', cursor: 'pointer', transition: 'all 0.15s' },
-    campusTabActive: { background: 'rgba(37,99,235,0.09)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.22)', fontWeight: 700 },
-    campusDot: { width: 6, height: 6, borderRadius: '50%', background: '#2563eb', display: 'inline-block' },
+    campusTabActive: { background: 'rgba(79,70,229,0.08)', color: '#4f46e5', border: '1px solid rgba(79,70,229,0.22)', fontWeight: 700 },
+    campusDot: { width: 6, height: 6, borderRadius: '50%', background: '#4f46e5', display: 'inline-block' },
     campusRight: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 },
     campusAY: { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' },
     campusSem: { fontSize: '0.72rem', color: 'var(--text-muted)' },
@@ -546,12 +546,12 @@ const S = {
 
     /* Academic Reporting Module */
     academicBox: { background: 'white', borderRadius: 16, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', marginBottom: 16, overflow: 'hidden' },
-    academicHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(90deg, rgba(37,99,235,0.04) 0%, transparent 60%)' },
+    academicHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(90deg, rgba(79,70,229,0.04) 0%, transparent 60%)' },
     academicTitle: { display: 'flex', alignItems: 'center', fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 3 },
     academicSub: { fontSize: '0.7rem', color: 'var(--text-muted)', paddingLeft: 23 },
     academicTabs: { display: 'flex', gap: 4, background: 'var(--bg-hover)', borderRadius: 10, padding: 4 },
     academicTab: { padding: '6px 14px', borderRadius: 7, fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.15s' },
-    academicTabActive: { background: 'white', color: '#2563eb', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
+    academicTabActive: { background: 'white', color: '#4f46e5', fontWeight: 700, boxShadow: '0 1px 6px rgba(79,70,229,0.12)' },
     academicContent: { padding: '20px 22px' },
 
     /* Subject performance */
