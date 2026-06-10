@@ -3,6 +3,7 @@ import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext.jsx';
 
 import Sidebar from '../components/layout/Sidebar.jsx';
+import Footer from '../components/layout/Footer.jsx';
 import Login from '../pages/auth/Login.jsx';
 import ForgotPassword from '../pages/auth/ForgotPassword.jsx';
 import StudentLogin from '../pages/auth/StudentLogin.jsx';
@@ -40,12 +41,15 @@ function Protected({ children }) {
         : <Navigate to="/login" replace />;
 }
 
-/* ── Layout wrapper with sidebar ── */
+/* ── Layout wrapper with sidebar + footer ── */
 function AppLayout({ children }) {
     return (
         <>
             <Sidebar />
-            {children}
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                <div style={{ flex: 1 }}>{children}</div>
+                <Footer />
+            </div>
         </>
     );
 }
