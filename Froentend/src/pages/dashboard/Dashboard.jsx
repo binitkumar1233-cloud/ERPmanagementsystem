@@ -1,5 +1,6 @@
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCountUp } from '../../hooks/useCountUp.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import {
@@ -111,6 +112,41 @@ function cgpaStyle(cgpa) {
 }
 
 /* ═══════════════════════════════════════
+   ANIMATED SUB-COMPONENTS
+═══════════════════════════════════════ */
+function HeroCard({ label, value, change, up, icon: Icon, gradient, glow, sub }) {
+    const animated = useCountUp(value);
+    return (
+        <div style={{ ...S.heroCard, background: gradient, boxShadow: `0 8px 28px ${glow}` }}>
+            <div style={S.heroTop}>
+                <div style={S.heroIconBox}><Icon size={21} strokeWidth={2} color="white" /></div>
+                <div style={S.heroChangePill}>
+                    {up === true  && <ArrowUpRight size={11} />}
+                    {up === false && <ArrowDownRight size={11} />}
+                    {change}
+                </div>
+            </div>
+            <div style={S.heroVal}>{animated}</div>
+            <div style={S.heroLbl}>{label}</div>
+            <div style={S.heroSub}>{sub}</div>
+            <div style={S.heroShine} />
+        </div>
+    );
+}
+
+function KpiCard({ label, value, sub, icon: Icon, color, bg, border }) {
+    const animated = useCountUp(value);
+    return (
+        <div style={{ ...S.kpiCard, background: bg, border: `1px solid ${border}` }}>
+            <div style={{ ...S.kpiIcon, color }}><Icon size={15} strokeWidth={2} /></div>
+            <div style={{ ...S.kpiVal, color }}>{animated}</div>
+            <div style={S.kpiLbl}>{label}</div>
+            <div style={S.kpiSub}>{sub}</div>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════
    COMPONENT
 ═══════════════════════════════════════ */
 export default function Dashboard() {
@@ -125,10 +161,10 @@ export default function Dashboard() {
     const cs = CAMPUS_STATS[campus];
 
     const heroCards = [
-        { label: 'Total Students',  value: cs.students.toLocaleString(), change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(135deg,#1e3a8a,#2563eb)', glow: 'rgba(37,99,235,0.32)', sub: 'Across selected campus' },
-        { label: 'Faculty Members', value: String(cs.faculty),           change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.32)', sub: 'All departments' },
-        { label: 'Active Courses',  value: String(cs.courses),           change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(135deg,#4c1d95,#7c3aed)', glow: 'rgba(139,92,246,0.32)', sub: 'Current semester' },
-        { label: 'Pass Rate',       value: cs.passRate,                  change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(135deg,#92400e,#d97706)', glow: 'rgba(245,158,11,0.32)', sub: 'Above national avg' },
+        { label: 'Total Students',  value: cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(135deg,#1e3a8a,#2563eb)', glow: 'rgba(37,99,235,0.32)', sub: 'Across selected campus' },
+        { label: 'Faculty Members', value: cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.32)', sub: 'All departments' },
+        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(135deg,#4c1d95,#7c3aed)', glow: 'rgba(139,92,246,0.32)', sub: 'Current semester' },
+        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(135deg,#92400e,#d97706)', glow: 'rgba(245,158,11,0.32)', sub: 'Above national avg' },
     ];
 
     return (
@@ -161,41 +197,21 @@ export default function Dashboard() {
 
             {/* ── Hero KPI Cards ── */}
             <div style={S.heroGrid}>
-                {heroCards.map(({ label, value, change, up, icon: Icon, gradient, glow, sub }) => (
-                    <div key={label} style={{ ...S.heroCard, background: gradient, boxShadow: `0 8px 28px ${glow}` }}>
-                        <div style={S.heroTop}>
-                            <div style={S.heroIconBox}><Icon size={21} strokeWidth={2} color="white" /></div>
-                            <div style={S.heroChangePill}>
-                                {up === true  && <ArrowUpRight size={11} />}
-                                {up === false && <ArrowDownRight size={11} />}
-                                {change}
-                            </div>
-                        </div>
-                        <div style={S.heroVal}>{value}</div>
-                        <div style={S.heroLbl}>{label}</div>
-                        <div style={S.heroSub}>{sub}</div>
-                        <div style={S.heroShine} />
-                    </div>
+                {heroCards.map((card) => (
+                    <HeroCard key={card.label} {...card} />
                 ))}
             </div>
 
             {/* ── KPI Strip ── */}
             <div style={S.kpiGrid}>
                 {[
-                    { label: 'Attendance Today', value: cs.attendance,    sub: `${cs.students} enrolled`,     icon: CheckCircle,  color:'#059669', bg:'rgba(16,185,129,0.09)',  border:'rgba(16,185,129,0.22)' },
-                    { label: 'Fees Pending',      value: cs.feesPending,  sub: `${cs.pendingCount} students`, icon: AlertTriangle,color:'#d97706', bg:'rgba(245,158,11,0.09)',  border:'rgba(245,158,11,0.22)' },
-                    { label: 'Exams This Week',   value: '6',             sub: '3 departments',               icon: Calendar,     color:'#7c3aed', bg:'rgba(139,92,246,0.09)',  border:'rgba(139,92,246,0.22)' },
-                    { label: 'New Admissions',    value: String(cs.newAdm),sub:'This month',                  icon: UserPlus,     color:'#0284c7', bg:'rgba(2,132,199,0.09)',   border:'rgba(2,132,199,0.22)'  },
-                    { label: 'Avg. CGPA',         value: cs.cgpa,         sub: '+0.3 from last sem',          icon: Star,         color:'#dc2626', bg:'rgba(220,38,38,0.09)',   border:'rgba(220,38,38,0.22)'  },
-                    { label: 'Pending Alerts',    value: '23',            sub: '5 require action',            icon: Bell,         color:'#7c3aed', bg:'rgba(124,58,237,0.09)',  border:'rgba(124,58,237,0.22)' },
-                ].map(({ label, value, sub, icon: Icon, color, bg, border }) => (
-                    <div key={label} style={{ ...S.kpiCard, background: bg, border: `1px solid ${border}` }}>
-                        <div style={{ ...S.kpiIcon, color }}><Icon size={15} strokeWidth={2} /></div>
-                        <div style={{ ...S.kpiVal, color }}>{value}</div>
-                        <div style={S.kpiLbl}>{label}</div>
-                        <div style={S.kpiSub}>{sub}</div>
-                    </div>
-                ))}
+                    { label: 'Attendance Today', value: cs.attendance,     sub: `${cs.students} enrolled`,     icon: CheckCircle,  color:'#059669', bg:'rgba(16,185,129,0.09)',  border:'rgba(16,185,129,0.22)' },
+                    { label: 'Fees Pending',      value: cs.feesPending,   sub: `${cs.pendingCount} students`, icon: AlertTriangle,color:'#d97706', bg:'rgba(245,158,11,0.09)',  border:'rgba(245,158,11,0.22)' },
+                    { label: 'Exams This Week',   value: '6',              sub: '3 departments',               icon: Calendar,     color:'#7c3aed', bg:'rgba(139,92,246,0.09)',  border:'rgba(139,92,246,0.22)' },
+                    { label: 'New Admissions',    value: String(cs.newAdm),sub: 'This month',                  icon: UserPlus,     color:'#0284c7', bg:'rgba(2,132,199,0.09)',   border:'rgba(2,132,199,0.22)'  },
+                    { label: 'Avg. CGPA',         value: cs.cgpa,          sub: '+0.3 from last sem',          icon: Star,         color:'#dc2626', bg:'rgba(220,38,38,0.09)',   border:'rgba(220,38,38,0.22)'  },
+                    { label: 'Pending Alerts',    value: '23',             sub: '5 require action',            icon: Bell,         color:'#7c3aed', bg:'rgba(124,58,237,0.09)',  border:'rgba(124,58,237,0.22)' },
+                ].map(item => <KpiCard key={item.label} {...item} />)}
             </div>
 
             {/* ── Campus Overview Cards (only when All Campuses) ── */}
