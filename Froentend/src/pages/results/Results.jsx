@@ -5,7 +5,7 @@ import {
     Search, Download, Award, TrendingUp, TrendingDown,
     Medal, Filter, X, ChevronDown, ChevronUp,
     BarChart2, Star, FileText, Calendar,
-    User, Hash, Percent, BookOpen, Trophy,
+    User, Hash, Percent, BookOpen, Trophy, Printer,
 } from 'lucide-react';
 import { getGrade } from '../../utils/helpers.js';
 
@@ -88,6 +88,195 @@ const MEDAL_GRADIENT = [
 const MEDAL_GLOW = ['rgba(245,158,11,0.35)','rgba(148,163,184,0.3)','rgba(180,83,9,0.3)'];
 const MEDAL_LABEL = ['🥇','🥈','🥉'];
 
+/* ─────────────────────────── CERTIFICATE ─────────────────────────── */
+function Certificate({ student, onClose }) {
+    const a    = avg(student.subjects);
+    const tot  = total(student.subjects);
+    const maxT_ = maxT(student.subjects);
+    const gpa  = cgpa(a);
+    const rnk  = rank(student.id);
+    const pass = a >= 40;
+    const g    = getGrade(a);
+    const today = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' });
+
+    const printCert = () => window.print();
+
+    return (
+        <div style={CS.overlay} onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
+            <div style={CS.wrapper}>
+                {/* toolbar */}
+                <div style={CS.toolbar}>
+                    <span style={{ fontSize:'0.82rem', color:'#94a3b8' }}>Certificate Preview</span>
+                    <div style={{ display:'flex', gap:8 }}>
+                        <button className="btn btn-primary btn-sm" onClick={printCert} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                            <Printer size={13}/> Print / Download PDF
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={onClose} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                            <X size={13}/> Close
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── certificate sheet ── */}
+                <div id="certificate-print" style={CS.sheet}>
+                    {/* outer border */}
+                    <div style={CS.outerBorder}>
+                        <div style={CS.innerBorder}>
+
+                            {/* header */}
+                            <div style={CS.header}>
+                                {/* emblem */}
+                                <div style={CS.emblem}>
+                                    <div style={CS.emblemInner}>
+                                        <div style={{ fontSize:'1.5rem', fontWeight:900, color:'#1e3a8a', lineHeight:1 }}>BIT</div>
+                                        <div style={{ fontSize:'0.45rem', letterSpacing:'0.08em', color:'#3b82f6', marginTop:2 }}>EST. 2005</div>
+                                    </div>
+                                </div>
+                                <div style={{ flex:1, textAlign:'center' }}>
+                                    <div style={CS.instName}>Binit Institute of Technology</div>
+                                    <div style={CS.instTag}>Affiliated to State Technical University &nbsp;|&nbsp; NAAC Accredited 'A' Grade</div>
+                                    <div style={CS.instAddr}>Near City Center, Tech Park Road, Bihar — 800001 &nbsp;·&nbsp; www.bit.edu.in</div>
+                                </div>
+                                {/* right seal placeholder */}
+                                <div style={{ ...CS.emblem, opacity:0.18 }}>
+                                    <div style={CS.emblemInner}>
+                                        <div style={{ fontSize:'1.5rem', fontWeight:900, color:'#1e3a8a', lineHeight:1 }}>BIT</div>
+                                        <div style={{ fontSize:'0.45rem', letterSpacing:'0.08em', color:'#3b82f6', marginTop:2 }}>SEAL</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* gold divider */}
+                            <div style={CS.divider}/>
+
+                            {/* certificate title */}
+                            <div style={{ textAlign:'center', margin:'22px 0 8px' }}>
+                                <div style={CS.certTitle}>ACADEMIC MARKSHEET CERTIFICATE</div>
+                                <div style={CS.certSub}>
+                                    {student.sem} &nbsp;·&nbsp; Academic Year 2023–24
+                                </div>
+                            </div>
+
+                            {/* certified text */}
+                            <div style={CS.certText}>
+                                This is to certify that&nbsp;
+                                <span style={CS.highlight}>{student.name}</span>,
+                                bearing Registration No.&nbsp;
+                                <span style={CS.highlight}>{student.regNo}</span>,
+                                enrolled in&nbsp;
+                                <span style={CS.highlight}>{student.course}</span>&nbsp;
+                                has appeared in the&nbsp;
+                                <span style={CS.highlight}>{student.sem}</span>&nbsp;
+                                Examination and has&nbsp;
+                                <span style={{ color: pass ? '#059669' : '#dc2626', fontWeight:700 }}>{pass ? 'PASSED' : 'FAILED'}</span>&nbsp;
+                                with the following academic performance:
+                            </div>
+
+                            {/* student info strip */}
+                            <div style={CS.infoStrip}>
+                                {[
+                                    { label:'Student Name',   value: student.name },
+                                    { label:'Reg. No.',       value: student.regNo },
+                                    { label:'Date of Birth',  value: student.dob },
+                                    { label:'Programme',      value: student.course },
+                                    { label:'Semester',       value: student.sem },
+                                ].map(({ label, value }) => (
+                                    <div key={label} style={CS.infoItem}>
+                                        <span style={CS.infoLabel}>{label}</span>
+                                        <span style={CS.infoValue}>{value}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* subject table */}
+                            <table style={CS.table}>
+                                <thead>
+                                    <tr style={{ background:'linear-gradient(135deg,#1e3a8a,#2563eb)' }}>
+                                        <th style={{ ...CS.th, textAlign:'left' }}>Subject</th>
+                                        <th style={{ ...CS.th, width:80 }}>Code</th>
+                                        <th style={{ ...CS.th, width:60 }}>Max</th>
+                                        <th style={{ ...CS.th, width:70 }}>Obtained</th>
+                                        <th style={{ ...CS.th, width:60 }}>%</th>
+                                        <th style={{ ...CS.th, width:60 }}>Grade</th>
+                                        <th style={{ ...CS.th, width:70 }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {student.subjects.map((s, i) => {
+                                        const sp   = Math.round(s.m / s.max * 100);
+                                        const spass = sp >= 40;
+                                        return (
+                                            <tr key={s.code} style={{ background: i%2===0?'#f8faff':'white' }}>
+                                                <td style={CS.td}>{s.n}</td>
+                                                <td style={{ ...CS.td, fontFamily:'monospace', fontSize:'0.72rem', color:'#64748b', textAlign:'center' }}>{s.code}</td>
+                                                <td style={{ ...CS.td, textAlign:'center' }}>{s.max}</td>
+                                                <td style={{ ...CS.td, textAlign:'center', fontWeight:800, color: getColor(sp) }}>{s.m}</td>
+                                                <td style={{ ...CS.td, textAlign:'center' }}>{sp}%</td>
+                                                <td style={{ ...CS.td, textAlign:'center', fontWeight:800, color: GRADE_COLORS[getGrade(sp)] || '#64748b' }}>{getGrade(sp)}</td>
+                                                <td style={{ ...CS.td, textAlign:'center', fontWeight:700, color: spass?'#059669':'#dc2626' }}>{spass?'Pass':'Fail'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                                <tfoot>
+                                    <tr style={{ background:'#1e3a8a' }}>
+                                        <td style={{ ...CS.td, color:'white', fontWeight:800, padding:'10px 14px' }} colSpan={2}>TOTAL / OVERALL</td>
+                                        <td style={{ ...CS.td, textAlign:'center', color:'white', fontWeight:700 }}>{maxT_}</td>
+                                        <td style={{ ...CS.td, textAlign:'center', color:'#fbbf24', fontWeight:900, fontSize:'0.92rem' }}>{tot}</td>
+                                        <td style={{ ...CS.td, textAlign:'center', color:'#fbbf24', fontWeight:900 }}>{a}%</td>
+                                        <td style={{ ...CS.td, textAlign:'center', color:'#fbbf24', fontWeight:900 }}>{g}</td>
+                                        <td style={{ ...CS.td, textAlign:'center', color: pass?'#4ade80':'#f87171', fontWeight:800 }}>{pass?'PASS':'FAIL'}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            {/* result summary strip */}
+                            <div style={CS.summaryStrip}>
+                                {[
+                                    { label:'Total Marks', value:`${tot} / ${maxT_}`, color:'#1e40af' },
+                                    { label:'Percentage',  value:`${a}%`,              color: getColor(a) },
+                                    { label:'Grade',       value: g,                   color: GRADE_COLORS[g] || '#64748b' },
+                                    { label:'CGPA',        value: gpa,                 color:'#7c3aed' },
+                                    { label:'Class Rank',  value:`#${rnk}`,            color:'#92400e' },
+                                    { label:'Result',      value: pass?'PASS':'FAIL',  color: pass?'#059669':'#dc2626' },
+                                ].map(({ label, value, color }) => (
+                                    <div key={label} style={CS.summaryItem}>
+                                        <div style={{ fontSize:'0.58rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:'#94a3b8', marginBottom:4 }}>{label}</div>
+                                        <div style={{ fontWeight:900, fontSize:'1.05rem', color }}>{value}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* gold divider */}
+                            <div style={CS.divider}/>
+
+                            {/* footer signatures */}
+                            <div style={CS.sigRow}>
+                                <div style={CS.sigBox}>
+                                    <div style={CS.sigLine}/>
+                                    <div style={CS.sigName}>Controller of Examinations</div>
+                                    <div style={CS.sigInst}>Binit Institute of Technology</div>
+                                </div>
+                                <div style={{ textAlign:'center', color:'#94a3b8' }}>
+                                    <div style={{ fontSize:'0.62rem', marginBottom:6 }}>Date of Issue</div>
+                                    <div style={{ fontWeight:800, fontSize:'0.82rem', color:'#1e3a8a' }}>{today}</div>
+                                    <div style={{ marginTop:10, padding:'6px 14px', border:'1.5px solid #1e3a8a', borderRadius:6, fontSize:'0.58rem', fontWeight:700, letterSpacing:'0.1em', color:'#1e3a8a' }}>OFFICIAL DOCUMENT</div>
+                                </div>
+                                <div style={CS.sigBox}>
+                                    <div style={CS.sigLine}/>
+                                    <div style={CS.sigName}>Principal</div>
+                                    <div style={CS.sigInst}>Binit Institute of Technology</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ─────────────────────────── COMPONENT ─────────────────────────── */
 export default function Results() {
     const [nameQ, setNameQ]   = useState('');
@@ -98,6 +287,7 @@ export default function Results() {
     const [semF,  setSemF]    = useState('All');
     const [open,  setOpen]    = useState(null);
     const [showF, setShowF]   = useState(false);
+    const [certStudent, setCertStudent] = useState(null);
 
     const passCount  = DATA.filter(r=>avg(r.subjects)>=40).length;
     const failCount  = DATA.length - passCount;
@@ -128,6 +318,7 @@ export default function Results() {
 
     return (
         <div className="erp-page">
+            {certStudent && <Certificate student={certStudent} onClose={() => setCertStudent(null)} />}
             <Navbar title="Results & Analytics" subtitle="Academic performance and grade reports" />
 
             {/* ── Hero KPI Cards ── */}
@@ -480,8 +671,8 @@ export default function Results() {
                                                                     <Star size={12}/>Class Rank: <b style={{ color:'var(--text-primary)' }}>#{rnk}</b> of {DATA.length} students
                                                                 </span>
                                                                 <div style={{ display:'flex', gap:8 }}>
-                                                                    <button className="btn btn-secondary btn-sm"><FileText size={13}/> View Marksheet</button>
-                                                                    <button className="btn btn-primary btn-sm"><Download size={13}/> Download PDF</button>
+                                                                    <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); setCertStudent(r); }}><FileText size={13}/> View Marksheet</button>
+                                                                    <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); setCertStudent(r); }}><Download size={13}/> Download PDF</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -503,6 +694,11 @@ export default function Results() {
                 @media(max-width:1100px){ .hero-6{ grid-template-columns:repeat(3,1fr)!important; } }
                 @media(max-width:900px){  .res-two-col{ flex-direction:column!important; } }
                 @media(max-width:640px){  .hero-6{ grid-template-columns:repeat(2,1fr)!important; } }
+                @media print {
+                    body > *:not(#certificate-print) { display: none !important; }
+                    #certificate-print { position:fixed; top:0; left:0; width:100%; height:auto; z-index:99999; }
+                    .cert-toolbar { display:none !important; }
+                }
             `}</style>
         </div>
     );
@@ -531,4 +727,48 @@ const S = {
     msHead:  { display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20, padding:'20px 24px', background:'linear-gradient(135deg,#f0f4ff,#e8f0fe)', borderBottom:'1.5px solid #c7d7fe', flexWrap:'wrap' },
     msStat:  { display:'flex', flexDirection:'column', alignItems:'center', background:'white', border:'1px solid #c7d7fe', borderRadius:10, padding:'10px 14px', minWidth:76, boxShadow:'0 1px 4px rgba(30,64,175,0.08)' },
     detActions: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 24px', background:'#fafbff', borderTop:'1px solid var(--border)', flexWrap:'wrap', gap:10 },
+};
+
+/* ══ CERTIFICATE STYLES ══ */
+const CS = {
+    overlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(15,23,42,0.72)', zIndex:99999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-start', overflowY:'auto', padding:'24px 16px 40px' },
+    wrapper: { width:'100%', maxWidth:900, display:'flex', flexDirection:'column', gap:0 },
+    toolbar: { display:'flex', alignItems:'center', justifyContent:'space-between', background:'#1e293b', borderRadius:'12px 12px 0 0', padding:'10px 18px', className:'cert-toolbar' },
+
+    sheet: { background:'white', borderRadius:'0 0 12px 12px', overflow:'hidden' },
+    outerBorder: { margin:20, border:'4px double #1e3a8a', borderRadius:8, padding:4 },
+    innerBorder: { border:'1.5px solid #93c5fd', borderRadius:6, padding:'24px 28px', background:'linear-gradient(180deg,#f0f7ff 0%,#fff 60%)' },
+
+    header: { display:'flex', alignItems:'center', gap:20, paddingBottom:16 },
+    emblem: { width:72, height:72, borderRadius:'50%', border:'3px solid #1e3a8a', background:'linear-gradient(135deg,#e0eaff,#c7d7fe)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+    emblemInner: { textAlign:'center' },
+    instName: { fontFamily:'Georgia, serif', fontSize:'1.35rem', fontWeight:700, color:'#1e3a8a', letterSpacing:'0.03em' },
+    instTag:  { fontSize:'0.65rem', color:'#3b82f6', fontWeight:600, marginTop:4, letterSpacing:'0.04em' },
+    instAddr: { fontSize:'0.6rem', color:'#64748b', marginTop:3 },
+
+    divider: { height:4, background:'linear-gradient(90deg,transparent,#f59e0b,#d97706,#f59e0b,transparent)', margin:'0 -28px', borderRadius:0 },
+
+    certTitle: { fontFamily:'Georgia, serif', fontSize:'1.25rem', fontWeight:700, color:'#1e3a8a', letterSpacing:'0.12em', textTransform:'uppercase' },
+    certSub:   { fontSize:'0.72rem', color:'#64748b', marginTop:6, fontStyle:'italic' },
+
+    certText: { margin:'14px 0 18px', fontSize:'0.82rem', lineHeight:1.8, color:'#334155', textAlign:'justify' },
+    highlight: { fontWeight:700, color:'#1e3a8a' },
+
+    infoStrip: { display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:1, background:'#e2e8f0', border:'1px solid #e2e8f0', borderRadius:8, overflow:'hidden', marginBottom:18 },
+    infoItem:  { background:'white', padding:'10px 12px', display:'flex', flexDirection:'column' },
+    infoLabel: { fontSize:'0.58rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', color:'#94a3b8', marginBottom:3 },
+    infoValue: { fontSize:'0.78rem', fontWeight:700, color:'#1e3a8a' },
+
+    table: { width:'100%', borderCollapse:'collapse', marginBottom:16, fontSize:'0.78rem' },
+    th: { padding:'10px 12px', color:'white', fontWeight:700, fontSize:'0.68rem', letterSpacing:'0.06em', textTransform:'uppercase', textAlign:'center' },
+    td: { padding:'8px 12px', borderBottom:'1px solid #e2e8f0', color:'#334155', fontSize:'0.78rem' },
+
+    summaryStrip: { display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:1, background:'#1e3a8a', borderRadius:8, overflow:'hidden', padding:1, marginBottom:20 },
+    summaryItem:  { background:'#f8faff', padding:'12px 8px', textAlign:'center' },
+
+    sigRow: { display:'flex', alignItems:'flex-end', justifyContent:'space-between', paddingTop:8 },
+    sigBox: { textAlign:'center', minWidth:180 },
+    sigLine: { borderTop:'1.5px solid #334155', marginBottom:6, width:'80%', margin:'0 auto 6px' },
+    sigName: { fontWeight:700, fontSize:'0.78rem', color:'#1e3a8a' },
+    sigInst: { fontSize:'0.62rem', color:'#64748b' },
 };
