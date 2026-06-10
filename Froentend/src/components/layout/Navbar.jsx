@@ -389,18 +389,26 @@ export default function Navbar({ title = 'Dashboard', subtitle = '' }) {
                     position: fixed; top: 0;
                     left: var(--sidebar-width); right: 0;
                     height: var(--navbar-height);
-                    background: rgba(255, 255, 255, 0.88);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+                    background: rgba(248, 249, 255, 0.92);
+                    backdrop-filter: blur(24px);
+                    -webkit-backdrop-filter: blur(24px);
+                    border-bottom: 1px solid rgba(224, 228, 240, 0.8);
                     display: flex; align-items: center;
                     justify-content: space-between;
                     padding: 0 22px;
                     z-index: 1000;
                     isolation: isolate;
-                    box-shadow: 0 1px 0 rgba(226,232,240,0.5), 0 4px 20px rgba(15,23,42,0.04);
+                    box-shadow: 0 1px 0 rgba(224,228,240,0.6), 0 4px 24px rgba(79,70,229,0.05);
                     gap: 10px; box-sizing: border-box;
                     transition: left 0.24s cubic-bezier(0.4,0,0.2,1);
+                }
+                .navbar::before {
+                    content: '';
+                    position: absolute;
+                    top: 0; left: 0; right: 0;
+                    height: 2px;
+                    background: linear-gradient(90deg, #4338ca, #6366f1, #8b5cf6, #4f46e5);
+                    opacity: 0.85;
                 }
 
                 /* LEFT */

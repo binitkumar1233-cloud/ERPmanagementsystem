@@ -211,13 +211,13 @@ export default function Login() {
         .login-root {
           display: flex;
           min-height: 100vh;
-          background: #f3f4f8;
+          background: #eef2ff;
         }
 
         /* ── Left panel ── */
         .login-panel {
           flex: 1;
-          background: linear-gradient(160deg, #0e1520 0%, #1a1040 40%, #0c1520 70%, #0a0e18 100%);
+          background: linear-gradient(145deg, #0d1321 0%, #111827 30%, #1a0f3c 65%, #0a0e1a 100%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -226,49 +226,61 @@ export default function Login() {
           overflow: hidden;
         }
 
-        /* Animated orb 1 */
+        /* Large indigo orb top-right */
         .login-panel::before {
           content: '';
           position: absolute;
-          width: 600px; height: 600px;
+          width: 700px; height: 700px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(79,70,229,0.18) 0%, transparent 65%);
-          top: -150px; right: -100px;
+          background: radial-gradient(circle at 40% 40%, rgba(79,70,229,0.22) 0%, rgba(99,102,241,0.08) 45%, transparent 70%);
+          top: -200px; right: -150px;
           pointer-events: none;
-          animation: orbFloat1 10s ease-in-out infinite alternate;
+          animation: orbFloat1 11s ease-in-out infinite alternate;
         }
 
-        /* Animated orb 2 */
+        /* Violet orb bottom-left */
         .login-panel::after {
           content: '';
           position: absolute;
-          width: 500px; height: 500px;
+          width: 550px; height: 550px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 65%);
-          bottom: -80px; left: -80px;
+          background: radial-gradient(circle at 60% 60%, rgba(139,92,246,0.18) 0%, rgba(167,139,250,0.06) 45%, transparent 70%);
+          bottom: -120px; left: -100px;
           pointer-events: none;
-          animation: orbFloat2 12s ease-in-out infinite alternate;
+          animation: orbFloat2 14s ease-in-out infinite alternate;
         }
 
         @keyframes orbFloat1 {
-          from { transform: translate(0,0) scale(1); }
-          to   { transform: translate(-40px, 40px) scale(1.1); }
+          from { transform: translate(0,0) scale(1) rotate(0deg); }
+          to   { transform: translate(-50px, 50px) scale(1.12) rotate(8deg); }
         }
         @keyframes orbFloat2 {
-          from { transform: translate(0,0) scale(1); }
-          to   { transform: translate(30px, -30px) scale(1.08); }
+          from { transform: translate(0,0) scale(1) rotate(0deg); }
+          to   { transform: translate(40px, -40px) scale(1.1) rotate(-6deg); }
         }
 
-        /* Subtle grid overlay */
+        /* Fine grid overlay */
         .login-panel-grid {
           position: absolute;
           inset: 0;
           background-image:
-            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-          background-size: 48px 48px;
+            linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+          background-size: 52px 52px;
           pointer-events: none;
           z-index: 0;
+        }
+
+        /* Diagonal gloss strip */
+        .login-panel-grid::after {
+          content: '';
+          position: absolute;
+          top: -30%; right: -10%;
+          width: 2px;
+          height: 160%;
+          background: linear-gradient(180deg, transparent, rgba(99,102,241,0.18), rgba(139,92,246,0.12), transparent);
+          transform: rotate(-20deg);
+          pointer-events: none;
         }
 
         .login-panel-inner {
@@ -282,113 +294,124 @@ export default function Login() {
           display: flex;
           align-items: center;
           gap: 14px;
-          margin-bottom: 52px;
+          margin-bottom: 56px;
         }
         .lp-logo-badge {
-          width: 44px; height: 44px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #4338ca, #4f46e5);
+          width: 46px; height: 46px;
+          border-radius: 13px;
+          background: linear-gradient(135deg, #3730a3, #4f46e5, #6366f1);
           color: white;
           display: grid;
           place-items: center;
-          box-shadow: 0 4px 20px rgba(79,70,229,0.5);
+          box-shadow: 0 4px 24px rgba(79,70,229,0.55), inset 0 1px 0 rgba(255,255,255,0.15);
           flex-shrink: 0;
         }
         .lp-brand-name {
           font-family: var(--font-display);
-          font-size: 1.1rem;
-          font-weight: 800;
+          font-size: 1.12rem;
+          font-weight: 900;
           color: white;
-          letter-spacing: -0.01em;
+          letter-spacing: -0.02em;
         }
         .lp-brand-tag {
-          font-size: 0.67rem;
-          color: rgba(255,255,255,0.32);
+          font-size: 0.64rem;
+          color: rgba(165,180,252,0.55);
           margin-top: 3px;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
         }
 
-        .lp-hero { margin-bottom: 42px; }
+        .lp-hero { margin-bottom: 44px; }
         .lp-hero h1 {
-          font-size: 2.5rem;
+          font-size: 2.7rem;
           color: white;
-          line-height: 1.15;
-          margin-bottom: 16px;
-          letter-spacing: -0.02em;
+          line-height: 1.12;
+          margin-bottom: 18px;
+          letter-spacing: -0.03em;
           font-family: var(--font-display);
+          font-weight: 900;
         }
         .lp-accent {
-          background: linear-gradient(90deg, #f59e0b, #fbbf24);
+          background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
         }
         .lp-hero p {
-          font-size: 0.88rem;
-          color: rgba(255,255,255,0.44);
-          line-height: 1.75;
+          font-size: 0.87rem;
+          color: rgba(255,255,255,0.42);
+          line-height: 1.8;
           max-width: 360px;
         }
 
         .lp-features {
           display: flex;
           flex-direction: column;
-          gap: 14px;
-          margin-bottom: 48px;
+          gap: 13px;
+          margin-bottom: 52px;
         }
         .lp-feature {
           display: flex;
-          align-items: flex-start;
-          gap: 13px;
+          align-items: center;
+          gap: 14px;
+          padding: 12px 14px;
+          border-radius: 11px;
+          background: rgba(255,255,255,0.035);
+          border: 1px solid rgba(99,102,241,0.12);
+          transition: background 0.2s;
         }
+        .lp-feature:hover { background: rgba(99,102,241,0.08); }
         .lp-feat-icon {
-          width: 32px; height: 32px;
-          border-radius: 8px;
-          background: rgba(79,70,229,0.2);
+          width: 34px; height: 34px;
+          border-radius: 9px;
+          background: linear-gradient(135deg, rgba(67,56,202,0.5), rgba(79,70,229,0.35));
           border: 1px solid rgba(99,102,241,0.3);
           color: #a5b4fc;
           display: grid;
           place-items: center;
           flex-shrink: 0;
-          margin-top: 1px;
         }
-        .lp-feat-title { font-size: 0.84rem; font-weight: 700; color: rgba(255,255,255,0.88); margin-bottom: 3px; }
-        .lp-feat-desc  { font-size: 0.72rem; color: rgba(255,255,255,0.34); line-height: 1.5; }
+        .lp-feat-title { font-size: 0.83rem; font-weight: 700; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
+        .lp-feat-desc  { font-size: 0.7rem; color: rgba(255,255,255,0.3); line-height: 1.4; }
 
         .lp-footer {
-          font-size: 0.7rem;
-          color: rgba(255,255,255,0.2);
+          font-size: 0.69rem;
+          color: rgba(255,255,255,0.18);
           padding-top: 20px;
-          border-top: 1px solid rgba(255,255,255,0.06);
-          letter-spacing: 0.02em;
+          border-top: 1px solid rgba(99,102,241,0.1);
+          letter-spacing: 0.03em;
         }
 
         /* ── Right form ── */
         .login-form-side {
-          width: 480px;
+          width: 500px;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 48px 40px;
-          background: #f3f4f8;
+          background: #eef2ff;
         }
 
         .login-form-wrap {
-          width: 100%; max-width: 380px;
+          width: 100%; max-width: 390px;
           background: white;
-          border-radius: 20px;
-          padding: 36px 32px;
-          border: 1px solid var(--border);
-          box-shadow: 0 8px 32px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.04);
+          border-radius: 22px;
+          padding: 38px 34px;
+          border: 1px solid rgba(224,228,240,0.8);
+          box-shadow: 0 4px 6px rgba(79,70,229,0.04), 0 12px 40px rgba(79,70,229,0.08), 0 2px 4px rgba(15,23,42,0.04);
         }
 
         .lf-header { margin-bottom: 28px; }
         .lf-header h2 {
-          font-size: 1.65rem; margin-bottom: 6px;
+          font-size: 1.7rem; margin-bottom: 6px;
           font-family: var(--font-display);
-          letter-spacing: -0.02em;
+          letter-spacing: -0.025em;
+          background: linear-gradient(135deg, #0f172a, #4f46e5);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
-        .lf-header p { font-size: 0.84rem; color: var(--text-muted); }
+        .lf-header p { font-size: 0.83rem; color: var(--text-muted); }
 
         .lf-error {
           background: #fef2f2;
@@ -398,9 +421,7 @@ export default function Login() {
           font-size: 0.83rem;
           color: var(--danger);
           margin-bottom: 20px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
+          display: flex; align-items: center; gap: 8px;
           border-left: 3px solid var(--danger);
         }
 
@@ -408,50 +429,35 @@ export default function Login() {
         .pw-wrap { position: relative; }
         .pw-wrap input { padding-right: 44px; }
         .pw-toggle {
-          position: absolute;
-          right: 12px; top: 50%;
+          position: absolute; right: 12px; top: 50%;
           transform: translateY(-50%);
-          background: none; border: none;
-          color: var(--text-muted);
+          background: none; border: none; color: var(--text-muted);
           cursor: pointer; padding: 4px;
           display: grid; place-items: center;
-          transition: color 0.15s;
-          border-radius: 4px;
+          transition: color 0.15s; border-radius: 4px;
         }
         .pw-toggle:hover { color: var(--primary); }
 
-        .lf-meta {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .lf-remember {
-          display: flex; align-items: center; gap: 7px;
-          font-size: 0.81rem; color: var(--text-secondary); cursor: pointer;
-        }
-        .lf-forgot {
-          font-size: 0.81rem; color: var(--primary); font-weight: 600;
-          transition: color 0.14s;
-        }
+        .lf-meta { display: flex; justify-content: space-between; align-items: center; }
+        .lf-remember { display: flex; align-items: center; gap: 7px; font-size: 0.81rem; color: var(--text-secondary); cursor: pointer; }
+        .lf-forgot { font-size: 0.81rem; color: var(--primary); font-weight: 600; transition: color 0.14s; }
         .lf-forgot:hover { color: var(--primary-dark); text-decoration: underline; }
 
         .lf-submit { width: 100%; justify-content: center; }
 
         .lf-demo {
-          margin-top: 20px;
-          padding: 13px;
+          margin-top: 20px; padding: 13px;
           background: var(--bg);
           border: 1px solid var(--border);
           border-radius: var(--radius-sm);
         }
         .lf-demo-label {
-          font-size: 0.66rem; font-weight: 800;
-          text-transform: uppercase; letter-spacing: 0.08em;
-          color: var(--text-muted); margin-bottom: 8px;
+          font-size: 0.64rem; font-weight: 800; text-transform: uppercase;
+          letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 8px;
         }
         .lf-demo-row { display: flex; gap: 8px; }
         .lf-demo-row span {
-          font-size: 0.77rem; background: white;
+          font-size: 0.76rem; background: white;
           padding: 4px 10px; border-radius: var(--radius-xs);
           color: var(--text-secondary); font-family: monospace;
           border: 1px solid var(--border);
@@ -459,7 +465,7 @@ export default function Login() {
 
         .lf-divider {
           display: flex; align-items: center; gap: 12px;
-          margin: 16px 0; color: var(--text-muted); font-size: 0.76rem;
+          margin: 16px 0; color: var(--text-muted); font-size: 0.75rem;
         }
         .lf-divider::before, .lf-divider::after {
           content: ''; flex: 1; height: 1px; background: var(--border);
@@ -470,35 +476,31 @@ export default function Login() {
           justify-content: center; gap: 10px;
           padding: 11px 0; border-radius: var(--radius-sm);
           border: 1.5px solid var(--border); background: white;
-          color: var(--text-primary); font-size: 0.88rem; font-weight: 600;
+          color: var(--text-primary); font-size: 0.87rem; font-weight: 600;
           cursor: pointer; transition: all 0.16s; font-family: inherit;
+          box-shadow: var(--shadow-xs);
         }
         .btn-google:hover {
           background: var(--bg-hover);
-          border-color: rgba(79,70,229,0.3);
-          box-shadow: 0 0 0 3px rgba(79,70,229,0.06);
+          border-color: rgba(79,70,229,0.35);
+          box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
         }
         .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .spinner-dark { border-color: #334155; border-top-color: transparent; }
 
-        .login-switch {
-          margin-top: 20px; display: flex; flex-direction: column;
-          gap: 10px; align-items: flex-start;
-        }
-        .login-switch p {
-          margin: 0; font-size: 0.88rem; font-weight: 600; color: var(--text-secondary);
-        }
+        .login-switch { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+        .login-switch p { margin: 0; font-size: 0.87rem; font-weight: 600; color: var(--text-secondary); }
         .btn-outline {
           background: transparent; color: var(--primary);
           border: 1.5px solid var(--primary);
           padding: 9px 18px; border-radius: var(--radius-sm);
-          font-size: 0.88rem; font-weight: 700; transition: all 0.16s;
+          font-size: 0.87rem; font-weight: 700; transition: all 0.16s;
           cursor: pointer; font-family: var(--font-display);
         }
         .btn-outline:hover {
           background: rgba(79,70,229,0.06);
-          box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+          box-shadow: 0 0 0 3px rgba(79,70,229,0.10);
         }
 
         @media (max-width: 900px) {

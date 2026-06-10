@@ -83,7 +83,9 @@ export default function Sidebar() {
             <style>{`
                 :root { --sidebar-width: ${collapsed ? '64px' : '260px'}; }
                 .sidebar-transition { transition: width 0.24s cubic-bezier(0.4,0,0.2,1); }
-                .sb-link:hover { background: rgba(255,255,255,0.05) !important; color: rgba(255,255,255,0.85) !important; }
+                .sb-link:hover { background: rgba(255,255,255,0.06) !important; color: rgba(255,255,255,0.9) !important; }
+                .sidebar-transition::-webkit-scrollbar { width: 3px; }
+                .sidebar-transition::-webkit-scrollbar-thumb { background: rgba(79,70,229,0.3); border-radius: 99px; }
             `}</style>
 
             <aside
@@ -207,20 +209,20 @@ const styles = {
         top: 0,
         left: 0,
         height: '100vh',
-        background: 'linear-gradient(180deg, #0e1520 0%, #0c1117 50%, #0a0e18 100%)',
+        background: 'linear-gradient(160deg, #111827 0%, #0d1321 40%, #080d1a 100%)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 100,
         overflowY: 'auto',
         overflowX: 'hidden',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
+        borderRight: '1px solid rgba(79,70,229,0.12)',
     },
     brand: {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
         borderBottom: '1px solid rgba(255,255,255,0.06)',
-        background: 'linear-gradient(135deg, rgba(79,70,229,0.12) 0%, transparent 100%)',
+        background: 'linear-gradient(135deg, rgba(79,70,229,0.16) 0%, rgba(99,102,241,0.05) 60%, transparent 100%)',
     },
     logoWrap: {
         display: 'flex',
@@ -285,17 +287,18 @@ const styles = {
         alignItems: 'center',
         gap: 10,
         padding: '9px 12px',
-        borderRadius: 8,
-        color: 'rgba(255,255,255,0.48)',
-        fontSize: '0.84rem',
+        borderRadius: 10,
+        color: 'rgba(255,255,255,0.46)',
+        fontSize: '0.83rem',
         fontWeight: 500,
-        transition: 'all 0.16s ease',
+        transition: 'all 0.17s ease',
         textDecoration: 'none',
         marginBottom: 2,
         position: 'relative',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         borderLeft: '3px solid transparent',
+        letterSpacing: '0.01em',
     },
     linkCollapsed: {
         padding: '9px 0',

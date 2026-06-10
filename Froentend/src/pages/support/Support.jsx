@@ -254,27 +254,33 @@ export default function Support() {
 
             {/* ── Hero ── */}
             <div style={{
-                background: 'linear-gradient(135deg, #1e40af 0%, #3b60d4 100%)',
-                borderRadius: 18, padding: '36px 32px', marginBottom: 28,
+                background: 'linear-gradient(135deg, #2d1b69 0%, #3730a3 30%, #4f46e5 65%, #6366f1 100%)',
+                borderRadius: 20, padding: '40px 36px', marginBottom: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
-                flexWrap: 'wrap',
+                flexWrap: 'wrap', position: 'relative', overflow: 'hidden',
             }}>
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 8, display: 'grid', placeItems: 'center' }}>
-                            <Headphones size={22} color="white" />
+                {/* Background decoration */}
+                <div style={{ position: 'absolute', top: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: -60, left: '40%', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 65%)', pointerEvents: 'none' }} />
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <div style={{ background: 'rgba(255,255,255,0.14)', borderRadius: 11, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                            <Headphones size={18} color="white" />
+                            <span style={{ color: 'white', fontSize: '0.71rem', fontWeight: 700, letterSpacing: '0.07em' }}>SUPPORT CENTER</span>
                         </div>
-                        <span style={{ background: 'rgba(255,255,255,0.15)', color: 'white', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 99, letterSpacing: '0.06em' }}>SUPPORT CENTER</span>
                     </div>
-                    <h1 style={{ color: 'white', fontSize: '1.6rem', fontWeight: 800, marginBottom: 6 }}>Help & Support</h1>
-                    <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.9rem' }}>Reach out to our team anytime — we're always ready to assist.</p>
+                    <h1 style={{ color: 'white', fontSize: '1.75rem', fontWeight: 900, marginBottom: 8, letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}>Help &amp; Support</h1>
+                    <p style={{ color: 'rgba(255,255,255,0.68)', fontSize: '0.88rem', lineHeight: 1.7, maxWidth: 380 }}>Reach out to our team anytime — we're always here and ready to assist you.</p>
                 </div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
                     {FEATURES.map(({ icon: Icon, label, sub }) => (
-                        <div key={label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 16px', minWidth: 120, backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                            <Icon size={18} color="white" style={{ marginBottom: 6 }} />
-                            <p style={{ color: 'white', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.2 }}>{label}</p>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginTop: 2 }}>{sub}</p>
+                        <div key={label} style={{ background: 'rgba(255,255,255,0.10)', borderRadius: 14, padding: '14px 18px', minWidth: 128, backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.14)', transition: 'background 0.2s' }}>
+                            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.14)', display: 'grid', placeItems: 'center', marginBottom: 8 }}>
+                                <Icon size={17} color="white" />
+                            </div>
+                            <p style={{ color: 'white', fontWeight: 700, fontSize: '0.81rem', lineHeight: 1.3, marginBottom: 3 }}>{label}</p>
+                            <p style={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.68rem', lineHeight: 1.4 }}>{sub}</p>
                         </div>
                     ))}
                 </div>
@@ -283,39 +289,45 @@ export default function Support() {
             {/* ── Contact Channels ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
                 {CHANNELS.map(({ icon: Icon, label, value, sub, color, bg, action, href }) => (
-                    <div key={label} className="card" style={{ padding: 24 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
-                            <div style={{ width: 48, height: 48, borderRadius: 12, background: bg, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                                <Icon size={22} color={color} />
-                            </div>
-                            <div>
-                                <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: 3 }}>{label}</p>
-                                <p style={{ fontWeight: 600, fontSize: '0.83rem', color }}>{value}</p>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                                    <Clock size={11} color="var(--text-muted)" />
-                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{sub}</span>
+                    <div key={label} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                        {/* Colored accent top bar */}
+                        <div style={{ height: 3, background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
+                        <div style={{ padding: 24 }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
+                                <div style={{ width: 50, height: 50, borderRadius: 14, background: bg, display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${color}20` }}>
+                                    <Icon size={22} color={color} />
+                                </div>
+                                <div>
+                                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: 4 }}>{label}</p>
+                                    <p style={{ fontWeight: 600, fontSize: '0.82rem', color }}>{value}</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5 }}>
+                                        <Clock size={11} color="var(--text-muted)" />
+                                        <span style={{ fontSize: '0.71rem', color: 'var(--text-muted)' }}>{sub}</span>
+                                    </div>
                                 </div>
                             </div>
+                            {href ? (
+                                <a href={href} style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                    width: '100%', padding: '10px 0', borderRadius: 10,
+                                    background: bg, color, fontWeight: 700, fontSize: '0.82rem',
+                                    textDecoration: 'none', border: `1.5px solid ${color}30`,
+                                    transition: 'filter 0.15s',
+                                }}>
+                                    {action} <ExternalLink size={13} />
+                                </a>
+                            ) : (
+                                <button onClick={() => setChatOpen(true)} style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                    width: '100%', padding: '10px 0', borderRadius: 10,
+                                    background: bg, color, fontWeight: 700, fontSize: '0.82rem',
+                                    border: `1.5px solid ${color}30`, cursor: 'pointer',
+                                    transition: 'filter 0.15s',
+                                }}>
+                                    {action} <MessageCircle size={13} />
+                                </button>
+                            )}
                         </div>
-                        {href ? (
-                            <a href={href} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                width: '100%', padding: '9px 0', borderRadius: 9,
-                                background: bg, color, fontWeight: 700, fontSize: '0.83rem',
-                                textDecoration: 'none', border: `1.5px solid ${color}22`,
-                            }}>
-                                {action} <ExternalLink size={13} />
-                            </a>
-                        ) : (
-                            <button onClick={() => setChatOpen(true)} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                width: '100%', padding: '9px 0', borderRadius: 9,
-                                background: bg, color, fontWeight: 700, fontSize: '0.83rem',
-                                border: `1.5px solid ${color}22`, cursor: 'pointer',
-                            }}>
-                                {action} <MessageCircle size={13} />
-                            </button>
-                        )}
                     </div>
                 ))}
             </div>

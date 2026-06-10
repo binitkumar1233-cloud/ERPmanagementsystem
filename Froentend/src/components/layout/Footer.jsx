@@ -152,15 +152,15 @@ export default function Footer() {
 
 const S = {
     footer: {
-        background: 'linear-gradient(180deg, #0a0e18 0%, #080c14 100%)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(160deg, #0d1321 0%, #111827 50%, #080d1a 100%)',
+        borderTop: '1px solid rgba(79,70,229,0.15)',
         marginLeft: 'var(--sidebar-width)',
         transition: 'margin-left 0.24s cubic-bezier(0.4,0,0.2,1)',
         fontFamily: 'var(--font-body)',
     },
     topBar: {
-        background: 'linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.04) 100%)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        background: 'linear-gradient(135deg, rgba(79,70,229,0.14) 0%, rgba(99,102,241,0.06) 50%, transparent 100%)',
+        borderBottom: '1px solid rgba(99,102,241,0.1)',
         padding: '28px 40px',
     },
     topBarInner: {

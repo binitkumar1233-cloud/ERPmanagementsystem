@@ -161,10 +161,10 @@ export default function Dashboard() {
     const cs = CAMPUS_STATS[campus];
 
     const heroCards = [
-        { label: 'Total Students',  value: cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(135deg,#312e81,#4f46e5,#6366f1)', glow: 'rgba(79,70,229,0.35)', sub: 'Across selected campus' },
-        { label: 'Faculty Members', value: cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(135deg,#064e3b,#059669,#10b981)', glow: 'rgba(16,185,129,0.35)', sub: 'All departments' },
-        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(135deg,#4c1d95,#7c3aed,#8b5cf6)', glow: 'rgba(139,92,246,0.35)', sub: 'Current semester' },
-        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(135deg,#78350f,#d97706,#f59e0b)', glow: 'rgba(245,158,11,0.35)', sub: 'Above national avg' },
+        { label: 'Total Students',  value: cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(145deg,#1e1b4b 0%,#3730a3 40%,#4f46e5 75%,#818cf8 100%)', glow: 'rgba(79,70,229,0.42)', sub: 'Across selected campus' },
+        { label: 'Faculty Members', value: cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(145deg,#022c22 0%,#065f46 40%,#059669 75%,#34d399 100%)', glow: 'rgba(16,185,129,0.42)', sub: 'All departments' },
+        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(145deg,#2e1065 0%,#5b21b6 40%,#7c3aed 75%,#a78bfa 100%)', glow: 'rgba(139,92,246,0.42)', sub: 'Current semester' },
+        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(145deg,#451a03 0%,#92400e 40%,#d97706 75%,#fbbf24 100%)', glow: 'rgba(245,158,11,0.42)', sub: 'Above national avg' },
     ];
 
     return (
@@ -499,7 +499,7 @@ function campusBadgeStyle(campus) {
 ═══════════════════════════════════════ */
 const S = {
     /* Campus bar */
-    campusBar: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '10px 16px', background: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' },
+    campusBar: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, padding: '10px 16px', background: 'white', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 1px 3px rgba(79,70,229,0.05), 0 2px 8px rgba(15,23,42,0.04)' },
     campusLeft: { display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 },
     campusBarLabel: { fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' },
     campusTabs: { display: 'flex', gap: 4 },
