@@ -13,40 +13,7 @@ export function AuthProvider({ children }) {
     const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
-        // Emergency fallback — releases loading gate if Firebase never fires
         const timeout = setTimeout(() => setAuthLoading(false), 8000);
-
-        // Hold the loading gate open until BOTH the redirect-result check AND the
-        // auth-state check complete, so the login page never flashes mid-flow.
-        let redirectDone = false;
-        let stateDone    = false;
-        const release = () => {
-            if (redirectDone && stateDone) {
-                clearTimeout(timeout);
-                setAuthLoading(false);
-            }
-        };
-
-        // Pick up a Google redirect result (if the user just came back from Google OAuth).
-        // Returns null on every normal page load — safe to call unconditionally.
-        authService.getGoogleRedirectResult()
-            .then((userData) => {
-                if (userData) {
-                    localStorage.setItem('erp_user', JSON.stringify(userData));
-                    setUser(userData);
-                    // Redirect result means we just signed in — go to dashboard
-                    window.location.replace('/dashboard');
-                    // Don't release loading gate — the page is navigating away
-                    return;
-                }
-                redirectDone = true;
-                release();
-            })
-            .catch((err) => {
-                console.error('[Auth] getGoogleRedirectResult error:', err);
-                redirectDone = true;
-                release();
-            });
 
         const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
             const authSource = localStorage.getItem('erp_auth_source');
@@ -60,11 +27,11 @@ export function AuthProvider({ children }) {
                 } catch { /* ignore */ }
             }
 
-            stateDone = true;
-            release();
+            clearTimeout(timeout);
+            setAuthLoading(false);
         }, () => {
-            stateDone = true;
-            release();
+            clearTimeout(timeout);
+            setAuthLoading(false);
         });
 
         return () => { unsub(); clearTimeout(timeout); };
@@ -77,10 +44,12 @@ export function AuthProvider({ children }) {
         return userData;
     }, []);
 
-    const loginWithGoogle = useCallback(
-        () => authService.loginWithGoogle(), // triggers redirect — no return value
-        []
-    );
+    const loginWithGoogle = useCallback(async () => {
+        const userData = await authService.loginWithGoogle();
+        localStorage.setItem('erp_user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+    }, []);
 
     const loginStudent = useCallback(async (email, password) => {
         const userData = await authService.loginStudent(email, password);

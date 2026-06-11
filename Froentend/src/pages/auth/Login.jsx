@@ -45,12 +45,12 @@ export default function Login() {
         setError('');
         setGoogleLoading(true);
         try {
-            // loginWithGoogle calls signInWithRedirect — browser navigates away to Google.
-            // If it throws (e.g. auth/operation-not-allowed), the catch shows the error.
             await loginWithGoogle();
-            // If we reach here the redirect is initiating — keep loading spinner visible
+            navigate('/dashboard');
         } catch (err) {
-            setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
+            if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+                setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
+            }
             setGoogleLoading(false);
         }
     };

@@ -1,7 +1,6 @@
 import {
     signInWithEmailAndPassword,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     browserPopupRedirectResolver,
     signOut,
     sendPasswordResetEmail,
@@ -48,18 +47,9 @@ export const authService = {
         };
     },
 
-    // Triggers Google sign-in via redirect — browser navigates away immediately.
-    // Pass browserPopupRedirectResolver explicitly so Vite never tree-shakes it.
-    loginWithGoogle: () =>
-        signInWithRedirect(auth, googleProvider, browserPopupRedirectResolver),
+    loginWithGoogle: async () => {
+        const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
 
-    // Called on app mount to pick up the result AFTER Google redirects back.
-    // Returns a user object if a redirect just completed, null otherwise.
-    getGoogleRedirectResult: async () => {
-        const result = await getRedirectResult(auth, browserPopupRedirectResolver);
-        if (!result) return null;
-
-        // Exchange the Firebase credential for a backend JWT
         try {
             const res = await fetch(`${BASE()}/auth/google`, {
                 method: 'POST',
@@ -77,7 +67,7 @@ export const authService = {
                 localStorage.setItem('erp_auth_source', 'backend');
                 return data.data;
             }
-        } catch { /* backend offline — use Firebase token */ }
+        } catch { /* backend offline — fall back to Firebase token */ }
 
         const fbToken = await result.user.getIdToken();
         localStorage.setItem('erp_token', fbToken);
