@@ -42,12 +42,10 @@ export function AuthProvider({ children }) {
         return userData;
     }, []);
 
-    const loginWithGoogle = useCallback(async () => {
-        const userData = await authService.loginWithGoogle();
-        setUser(userData);
-        localStorage.setItem('erp_user', JSON.stringify(userData));
-        return userData;
-    }, []);
+    // loginWithGoogle triggers signInWithRedirect — page navigates away immediately,
+    // so there is no return value to process here. The redirect result is handled
+    // by getGoogleRedirectResult in Login.jsx's useEffect after the page returns.
+    const loginWithGoogle = useCallback(() => authService.loginWithGoogle(), []);
 
     const loginStudent = useCallback(async (email, password) => {
         const userData = await authService.loginStudent(email, password);

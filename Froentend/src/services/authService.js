@@ -1,6 +1,7 @@
 import {
     signInWithEmailAndPassword,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     sendPasswordResetEmail,
     fetchSignInMethodsForEmail,
@@ -50,34 +51,14 @@ export const authService = {
         };
     },
 
-    loginWithGoogle: async () => {
-        const result = await signInWithPopup(auth, googleProvider);
+    // Triggers Google redirect — page navigates away; result handled by getGoogleRedirectResult
+    loginWithGoogle: () => signInWithRedirect(auth, googleProvider),
+
+    // Called on login page mount to pick up the redirect result after returning from Google
+    getGoogleRedirectResult: async () => {
+        const result = await getRedirectResult(auth);
+        if (!result) return null;
         const fbToken = await result.user.getIdToken();
-
-        // Try to exchange for a backend JWT so API calls work
-        const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        try {
-            const res = await fetch(`${BASE}/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    uid:   result.user.uid,
-                    name:  result.user.displayName,
-                    email: result.user.email,
-                    photo: result.user.photoURL,
-                }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                localStorage.setItem('erp_token', data.token);
-                localStorage.setItem('erp_auth_source', 'backend');
-                return data.data;
-            }
-        } catch {
-            // Backend offline — fall through to Firebase token
-        }
-
-        // Fallback: store Firebase token directly (same as original behaviour)
         localStorage.setItem('erp_token', fbToken);
         localStorage.setItem('erp_auth_source', 'firebase');
         return {

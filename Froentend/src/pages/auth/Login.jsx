@@ -1,7 +1,8 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, BookOpen, Shield, Users, BarChart2 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
+import { authService } from '../../services/authService.js';
 import Logo from '../../components/common/Logo.jsx';
 
 const FEATURES = [
@@ -36,17 +37,24 @@ export default function Login() {
         }
     };
 
-    const handleGoogle = async () => {
-        setError('');
+    /* Pick up Google redirect result when returning from Google sign-in */
+    useEffect(() => {
         setGoogleLoading(true);
-        try {
-            await loginWithGoogle();
-            navigate('/dashboard');
-        } catch (err) {
-            setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
-        } finally {
-            setGoogleLoading(false);
-        }
+        authService.getGoogleRedirectResult()
+            .then(userData => {
+                if (!userData) return;
+                localStorage.setItem('erp_user', JSON.stringify(userData));
+                window.location.href = '/dashboard';
+            })
+            .catch(err => {
+                setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
+            })
+            .finally(() => setGoogleLoading(false));
+    }, []);
+
+    const handleGoogle = () => {
+        setError('');
+        loginWithGoogle(); // triggers signInWithRedirect — navigates away to Google
     };
 
     const firebaseError = (code) => ({
