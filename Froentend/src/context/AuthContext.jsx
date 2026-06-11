@@ -18,19 +18,12 @@ export function AuthProvider({ children }) {
         const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
             clearTimeout(timeout);
 
-            const authSource = localStorage.getItem('erp_auth_source');
+            const authSource  = localStorage.getItem('erp_auth_source');
+            const onLoginPage = window.location.pathname === '/login' || window.location.pathname === '/';
 
-            if (firebaseUser && authSource === 'firebase') {
-                // Existing Firebase session — just keep the token fresh
-                try {
-                    const token = await firebaseUser.getIdToken();
-                    localStorage.setItem('erp_token', token);
-                } catch { /* ignore token refresh errors */ }
-                setAuthLoading(false);
-
-            } else if (firebaseUser && !authSource) {
-                // No auth source set but Firebase has a user — Google redirect just landed.
-                // Exchange the Firebase token for a backend JWT so API calls work.
+            if (firebaseUser && (onLoginPage || !authSource)) {
+                // Firebase user on the login page (Google redirect just returned)
+                // OR first-ever session — exchange for a backend JWT.
                 try {
                     const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
                     let userData, token;
@@ -52,9 +45,8 @@ export function AuthProvider({ children }) {
                             userData = data.data;
                             localStorage.setItem('erp_auth_source', 'backend');
                         }
-                    } catch { /* backend offline — fall through */ }
+                    } catch { /* backend offline — fall through to Firebase token */ }
 
-                    // Fallback to Firebase token if backend exchange failed
                     if (!token) {
                         token = await firebaseUser.getIdToken();
                         userData = {
@@ -71,15 +63,21 @@ export function AuthProvider({ children }) {
                     localStorage.setItem('erp_user', JSON.stringify(userData));
                     setUser(userData);
                     setAuthLoading(false);
-                    if (window.location.pathname === '/login' || window.location.pathname === '/') {
-                        window.location.href = '/dashboard';
-                    }
+                    if (onLoginPage) window.location.href = '/dashboard';
                 } catch {
                     setAuthLoading(false);
                 }
 
+            } else if (firebaseUser && authSource === 'firebase') {
+                // Existing Firebase session on an interior page — just refresh the token
+                try {
+                    const token = await firebaseUser.getIdToken();
+                    localStorage.setItem('erp_token', token);
+                } catch { /* ignore */ }
+                setAuthLoading(false);
+
             } else {
-                // Backend JWT user or no user — don't touch erp_token
+                // Backend JWT session or logged-out — don't touch erp_token
                 setAuthLoading(false);
             }
         }, () => {
