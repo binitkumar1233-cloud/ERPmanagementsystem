@@ -3,7 +3,7 @@ import {
     Mail, Phone, MapPin, Globe,
     GraduationCap, Users, BookOpen, CreditCard,
     BarChart2, ClipboardCheck, Shield, HelpCircle,
-    Github, Twitter, Linkedin,
+    Github, Twitter, Linkedin, Instagram,
 } from 'lucide-react';
 import Logo from '../common/Logo.jsx';
 
@@ -33,9 +33,10 @@ const CONTACT = [
 ];
 
 const SOCIALS = [
-    { icon: Github,   href: '#', label: 'GitHub'   },
-    { icon: Twitter,  href: '#', label: 'Twitter'  },
-    { icon: Linkedin, href: '#', label: 'LinkedIn' },
+    { icon: Github,    href: '#',                                                                 label: 'GitHub'    },
+    { icon: Twitter,   href: '#',                                                                 label: 'Twitter'   },
+    { icon: Linkedin,  href: '#',                                                                 label: 'LinkedIn'  },
+    { icon: Instagram, href: 'https://www.instagram.com/kumar_binit1001?igsh=cHE5MjIxb24xeXpx', label: 'Instagram' },
 ];
 
 export default function Footer() {
