@@ -209,6 +209,8 @@ export default function Dashboard() {
     const liveStudents  = connected && liveStats ? liveStats.totalStudents   : null;
     const liveFaculty   = connected && liveStats ? liveStats.totalTeachers   : null;
     const liveFeePend   = connected && liveStats ? liveStats.totalFeePending  : null;
+    const liveAttPct    = connected && liveStats ? liveStats.attendancePct   : null;
+    const livePendCount = connected && liveStats ? liveStats.feePendingCount : null;
 
     const totalStudents = liveStudents ?? apiStudents ?? CAMPUS_STATS.all.students;
     const totalFaculty  = liveFaculty  ?? apiTeachers ?? CAMPUS_STATS.all.faculty;
