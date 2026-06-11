@@ -146,4 +146,42 @@ router.post('/reset-password', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+/* POST /api/auth/google — Google OAuth: find-or-create admin user, return backend JWT */
+router.post('/google', async (req, res, next) => {
+    try {
+        const { uid, name, email, photo } = req.body;
+        if (!uid || !email)
+            return res.status(400).json({ success: false, message: 'uid and email are required' });
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = await User.create({
+                name: name || email.split('@')[0],
+                email,
+                password: crypto.randomBytes(24).toString('hex'),
+                role: 'Admin',
+                dept: 'Management',
+                status: 'Active',
+            });
+        }
+
+        if (user.status !== 'Active')
+            return res.status(403).json({ success: false, message: 'Account is inactive' });
+
+        user.lastLogin = new Date();
+        await user.save({ validateBeforeSave: false });
+
+        const token = signToken(user._id);
+        res.json({
+            success: true,
+            token,
+            data: {
+                id: user._id, name: user.name, email: user.email,
+                role: user.role, dept: user.dept, status: user.status,
+                photo: photo || null,
+            },
+        });
+    } catch (err) { next(err); }
+});
+
 module.exports = router;

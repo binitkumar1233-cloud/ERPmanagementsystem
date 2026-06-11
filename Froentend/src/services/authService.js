@@ -1,7 +1,6 @@
 import {
     signInWithEmailAndPassword,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signOut,
     sendPasswordResetEmail,
     fetchSignInMethodsForEmail,
@@ -51,24 +50,24 @@ export const authService = {
         };
     },
 
-    loginWithGoogle: () => {
-        // Use redirect instead of popup — avoids browser popup-blocking
-        return signInWithRedirect(auth, googleProvider);
-    },
-
-    getGoogleRedirectResult: async () => {
-        const result = await getRedirectResult(auth);
-        if (!result) return null;
-        const fbToken = await result.user.getIdToken();
-        localStorage.setItem('erp_token', fbToken);
-        localStorage.setItem('erp_auth_source', 'firebase');
-        return {
-            id:    result.user.uid,
-            name:  result.user.displayName,
-            email: result.user.email,
-            role:  'Administrator',
-            photo: result.user.photoURL,
-        };
+    loginWithGoogle: async () => {
+        const result = await signInWithPopup(auth, googleProvider);
+        const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${BASE}/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                uid:   result.user.uid,
+                name:  result.user.displayName,
+                email: result.user.email,
+                photo: result.user.photoURL,
+            }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+        localStorage.setItem('erp_token', data.token);
+        localStorage.setItem('erp_auth_source', 'backend');
+        return data.data;
     },
 
     loginStudent: async (email, password) => {

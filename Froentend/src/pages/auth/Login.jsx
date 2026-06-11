@@ -191,15 +191,6 @@ export default function Login() {
                         )}
                     </button>
 
-                    {/* Demo hint */}
-                    <div className="lf-demo">
-                        <p className="lf-demo-label">Demo credentials</p>
-                        <div className="lf-demo-row">
-                            <span>any@email.com</span>
-                            <span>any password</span>
-                        </div>
-                    </div>
-
                     <div className="login-switch">
                         <p>Need student access?</p>
                         <Link to="/student-login" className="btn btn-outline">Go to Student Portal</Link>
