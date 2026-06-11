@@ -212,6 +212,9 @@ export default function Dashboard() {
     const liveAttPct    = connected && liveStats ? liveStats.attendancePct   : null;
     const livePendCount = connected && liveStats ? liveStats.feePendingCount : null;
 
+    /* Campus-specific stats shorthand */
+    const cs = CAMPUS_STATS[campus] || CAMPUS_STATS.all;
+
     const totalStudents = liveStudents ?? apiStudents ?? CAMPUS_STATS.all.students;
     const totalFaculty  = liveFaculty  ?? apiTeachers ?? CAMPUS_STATS.all.faculty;
     const totalCourses  = apiCourses   ?? CAMPUS_STATS.all.courses;
