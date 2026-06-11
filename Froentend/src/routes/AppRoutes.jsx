@@ -48,7 +48,14 @@ function AppLayout({ children }) {
     return (
         <>
             <Sidebar />
-            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            {/* Single element owns the sidebar offset — no double-margin on children */}
+            <div style={{
+                marginLeft: 'var(--sidebar-width)',
+                transition: 'margin-left 0.24s cubic-bezier(0.4,0,0.2,1)',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: '100vh',
+            }}>
                 <div style={{ flex: 1 }}>{children}</div>
                 <Footer />
             </div>

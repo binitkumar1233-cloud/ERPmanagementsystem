@@ -154,8 +154,6 @@ const S = {
     footer: {
         background: 'linear-gradient(160deg, #0d1321 0%, #111827 50%, #080d1a 100%)',
         borderTop: '1px solid rgba(79,70,229,0.15)',
-        marginLeft: 'var(--sidebar-width)',
-        transition: 'margin-left 0.24s cubic-bezier(0.4,0,0.2,1)',
         fontFamily: 'var(--font-body)',
     },
     topBar: {

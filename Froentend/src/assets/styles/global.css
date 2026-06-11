@@ -250,7 +250,6 @@ tbody tr:hover td { background: var(--bg-hover); }
 
 /* ── Page layout ── */
 .erp-page {
-    margin-left: var(--sidebar-width);
     margin-top: 0;
     padding: calc(var(--navbar-height) + 32px) 28px 28px;
     min-height: 100vh;
