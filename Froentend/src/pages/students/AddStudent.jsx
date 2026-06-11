@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../services/api.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import {
     ArrowLeft, UserPlus, User, Phone, Mail, MapPin, Calendar,
@@ -162,6 +163,8 @@ function StudentPreview({ form }) {
     );
 }
 
+const YEAR_LABELS = { '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5': '4th' };
+
 /* ─── Main component ─────────────────────────────────────────────────── */
 export default function AddStudent() {
     const navigate = useNavigate();
@@ -194,10 +197,29 @@ export default function AddStudent() {
         e.preventDefault();
         if (!validate()) return;
         setSaving(true);
-        await new Promise(r => setTimeout(r, 900));
-        setSaving(false);
-        setDone(true);
-        setTimeout(() => navigate('/students'), 1800);
+        try {
+            await api.post('/students', {
+                name: `${form.firstName} ${form.lastName}`.trim(),
+                email: form.email,
+                phone: form.phone,
+                course: form.course,
+                year: YEAR_LABELS[String(form.year)] || '1st',
+                dob: form.dob || undefined,
+                gender: form.gender || undefined,
+                address: form.address || undefined,
+                rollNumber: form.rollNo || undefined,
+                admissionDate: form.admissionDate || undefined,
+                status: form.status,
+                parentName: form.guardianName || undefined,
+                parentPhone: form.guardianPhone || undefined,
+            });
+            setDone(true);
+            setTimeout(() => navigate('/students'), 1800);
+        } catch (err) {
+            setErrors(er => ({ ...er, submit: err.message }));
+        } finally {
+            setSaving(false);
+        }
     };
 
     /* ── Success overlay ── */
@@ -343,6 +365,11 @@ export default function AddStudent() {
                             </SectionCard>
 
                             {/* Actions */}
+                            {errors.submit && (
+                                <div style={{ marginBottom: 12, padding: '10px 14px', background: '#fff5f5', border: '1.5px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
+                                    ⚠ {errors.submit}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 4 }}>
                                 <button
                                     type="button"

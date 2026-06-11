@@ -12,24 +12,27 @@ export function AuthProvider({ children }) {
     });
     const [authLoading, setAuthLoading] = useState(true);
 
-    /* Keep token fresh — Firebase rotates tokens every hour */
+    /* Keep Firebase token fresh — only for Firebase-authenticated users */
     useEffect(() => {
+        // Fallback: if Firebase never responds (blocked, offline), unblock the app
+        const timeout = setTimeout(() => setAuthLoading(false), 5000);
+
         const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
+            clearTimeout(timeout);
+            // Only refresh erp_token from Firebase when the session was originally
+            // established via Firebase (Google/email-Firebase). Backend JWT users must
+            // NOT have their token overwritten — that would cause 401 on every page reload.
+            if (firebaseUser && localStorage.getItem('erp_auth_source') === 'firebase') {
                 const token = await firebaseUser.getIdToken();
                 localStorage.setItem('erp_token', token);
-            } else {
-                /* Only clear if not a student session (students don't use Firebase) */
-                const stored = JSON.parse(localStorage.getItem('erp_user') || 'null');
-                if (stored?.role !== 'Student') {
-                    setUser(null);
-                    localStorage.removeItem('erp_user');
-                    localStorage.removeItem('erp_token');
-                }
             }
             setAuthLoading(false);
+        }, () => {
+            clearTimeout(timeout);
+            setAuthLoading(false);
         });
-        return unsub;
+
+        return () => { unsub(); clearTimeout(timeout); };
     }, []);
 
     const login = useCallback(async (email, password) => {
@@ -59,7 +62,15 @@ export function AuthProvider({ children }) {
         window.location.href = '/login';
     }, []);
 
-    if (authLoading) return null;
+    if (authLoading) return (
+        <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#eef2ff' }}>
+            <div style={{ textAlign: 'center', color: '#4f6ef7' }}>
+                <div style={{ width: 40, height: 40, border: '4px solid #c7d2fe', borderTopColor: '#4f6ef7', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Loading…</p>
+            </div>
+        </div>
+    );
 
     return (
         <AuthContext.Provider value={{

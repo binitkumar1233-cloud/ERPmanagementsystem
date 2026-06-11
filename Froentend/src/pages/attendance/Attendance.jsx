@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { api } from '../../services/api.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -10,18 +11,6 @@ import {
 import { getAvatarColor } from '../../utils/helpers.js';
 
 /* ══════════════════════════════ DATA ══════════════════════════════ */
-const STUDENTS = [
-    { id:'STU001', name:'Priya Sharma',  roll:'CS001', cardId:'RFID-4A2B1C' },
-    { id:'STU002', name:'Rohan Das',     roll:'CS002', cardId:'RFID-5B3C2D' },
-    { id:'STU003', name:'Ananya Patel',  roll:'CS003', cardId:'RFID-6C4D3E' },
-    { id:'STU004', name:'Suresh Kumar',  roll:'CS004', cardId:'RFID-7D5E4F' },
-    { id:'STU005', name:'Meena Nayak',   roll:'CS005', cardId:'RFID-8E6F5G' },
-    { id:'STU006', name:'Amit Verma',    roll:'CS006', cardId:'BIO-11223'   },
-    { id:'STU007', name:'Sita Rao',      roll:'CS007', cardId:'BIO-22334'   },
-    { id:'STU008', name:'Arjun Mehta',   roll:'CS008', cardId:'RFID-9F7G6H' },
-    { id:'STU009', name:'Deepa Iyer',    roll:'CS009', cardId:'BIO-33445'   },
-    { id:'STU010', name:'Kiran Bhat',    roll:'CS010', cardId:'RFID-0G8H7I' },
-];
 const STAFF = [
     { id:'TCH001', name:'Dr. Anjali Singh',   dept:'Computer Science', role:'Head of Department',  cardId:'BIO-78901'   },
     { id:'TCH002', name:'Prof. Rajan Mehta',  dept:'Mathematics',      role:'Associate Professor', cardId:'RFID-A1B2C3' },
@@ -68,10 +57,7 @@ const INITIAL_LOGS = [
     { ...SCAN_POOL[6],  logId:'L-004', deviceId:'D2', deviceName:'Library',     time:'08:59:45' },
     { ...SCAN_POOL[14], logId:'L-005', deviceId:'D3', deviceName:'Lab Block',   time:'09:01:22' },
 ];
-const COURSES = ['B.Sc Computer Science','B.Com Honours','B.A English','B.Tech ECE','B.Tech CSE'];
 const TODAY   = new Date().toISOString().split('T')[0];
-const REPORT  = STUDENTS.map((s,i) => ({ ...s, present:18+(i%8), total:26 }));
-const STAFF_REPORT = STAFF.map((s,i) => ({ ...s, present:20+(i%6), total:26 }));
 
 const SC = {
     Present: { icon:CheckCircle, color:'#059669', bg:'rgba(5,150,105,0.10)', border:'rgba(5,150,105,0.35)'  },
@@ -89,16 +75,46 @@ export default function Attendance() {
     const poolIdx  = useRef(5);
     const timerRef = useRef(null);
 
-    const [date,   setDate]   = useState(TODAY);
-    const [course, setCourse] = useState(COURSES[0]);
-    const [attn,   setAttn]   = useState(Object.fromEntries(STUDENTS.map(s=>[s.id,'Present'])));
-    const [saved,  setSaved]  = useState(false);
-    const [saving, setSaving] = useState(false);
+    const [date,    setDate]    = useState(TODAY);
+    const [courses, setCourses] = useState([]);
+    const [course,  setCourse]  = useState('');
+    const [students, setStudents] = useState([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
+    const [attn,    setAttn]    = useState({});
+    const [saved,   setSaved]   = useState(false);
+    const [saving,  setSaving]  = useState(false);
+    const [saveError, setSaveError] = useState('');
 
     const [sDate,     setSDate]     = useState(TODAY);
     const [staffAttn, setStaffAttn] = useState(Object.fromEntries(STAFF.map(s=>[s.id,'Present'])));
     const [sSaved,    setSSaved]    = useState(false);
     const [sSaving,   setSSaving]   = useState(false);
+
+    // Fetch course list on mount
+    useEffect(() => {
+        api.get('/courses?status=Active')
+            .then(res => {
+                const list = (res.data || []).map(c => c.name);
+                setCourses(list);
+                if (list.length) setCourse(list[0]);
+            })
+            .catch(() => {});
+    }, []);
+
+    // Fetch students when selected course changes
+    useEffect(() => {
+        if (!course) return;
+        setLoadingStudents(true);
+        setSaved(false);
+        api.get(`/students?course=${encodeURIComponent(course)}&limit=200`)
+            .then(res => {
+                const list = res.data || [];
+                setStudents(list);
+                setAttn(Object.fromEntries(list.map(s => [s._id, 'Present'])));
+            })
+            .catch(() => setStudents([]))
+            .finally(() => setLoadingStudents(false));
+    }, [course]);
 
     useEffect(() => {
         if (active) {
@@ -116,13 +132,33 @@ export default function Attendance() {
     }, [active, deviceId]);
 
     const setStatus  = (id,s) => { setAttn(a=>({...a,[id]:s})); setSaved(false); };
-    const markAll    = s => { setAttn(Object.fromEntries(STUDENTS.map(st=>[st.id,s]))); setSaved(false); };
-    const handleSave = async () => { setSaving(true); await new Promise(r=>setTimeout(r,600)); setSaving(false); setSaved(true); };
+    const markAll    = s => { setAttn(Object.fromEntries(students.map(st=>[st._id,s]))); setSaved(false); };
+    const handleSave = async () => {
+        if (!students.length) return;
+        setSaving(true);
+        setSaveError('');
+        try {
+            const records = students.map(s => ({
+                student: s._id,
+                course,
+                date,
+                status: attn[s._id] || 'Present',
+            }));
+            await api.post('/attendance/bulk', { records });
+            setSaved(true);
+        } catch (err) {
+            setSaveError(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
     const setStStatus = (id,s) => { setStaffAttn(a=>({...a,[id]:s})); setSSaved(false); };
     const markAllSt   = s => { setStaffAttn(Object.fromEntries(STAFF.map(st=>[st.id,s]))); setSSaved(false); };
     const handleSSave = async () => { setSSaving(true); await new Promise(r=>setTimeout(r,600)); setSSaving(false); setSSaved(true); };
 
     const counts  = { present:Object.values(attn).filter(v=>v==='Present').length, absent:Object.values(attn).filter(v=>v==='Absent').length, late:Object.values(attn).filter(v=>v==='Late').length };
+    const REPORT  = students.map((s,i) => ({ id:s._id, name:s.name, roll:s.rollNumber||s.studentId, present:18+(i%8), total:26 }));
+    const STAFF_REPORT = STAFF.map((s,i) => ({ ...s, present:20+(i%6), total:26 }));
     const sCounts = { present:Object.values(staffAttn).filter(v=>v==='Present').length, absent:Object.values(staffAttn).filter(v=>v==='Absent').length, late:Object.values(staffAttn).filter(v=>v==='Late').length };
     const scanStats = { total:scanLog.length, verified:scanLog.filter(l=>l.status==='Verified').length, late:scanLog.filter(l=>l.status==='Late').length, unrecognized:scanLog.filter(l=>l.status==='Unrecognized').length };
     const onlineDevices = DEVICES.filter(d=>d.online).length;
@@ -133,9 +169,9 @@ export default function Attendance() {
             <Navbar title="Attendance" subtitle="Real-time biometric & RFID tracking, manual marking and monthly reports" />
 
             {/* ── Hero KPI Cards ── */}
-            <div style={S.heroGrid}>
+            <div className="hero-grid" style={S.heroGrid}>
                 {[
-                    { label:'Students Present', value:counts.present,  icon:UserCheck,  gradient:'linear-gradient(135deg,#065f46,#059669)', glow:'rgba(16,185,129,0.28)', sub:`${STUDENTS.length-counts.present} absent · ${counts.late} late` },
+                    { label:'Students Present', value:counts.present,  icon:UserCheck,  gradient:'linear-gradient(135deg,#065f46,#059669)', glow:'rgba(16,185,129,0.28)', sub:`${students.length-counts.present} absent · ${counts.late} late` },
                     { label:'Staff Present',    value:sCounts.present, icon:Users,      gradient:'linear-gradient(135deg,#1e3a8a,#2563eb)', glow:'rgba(37,99,235,0.28)',  sub:`${STAFF.length-sCounts.present} absent today` },
                     { label:'Active Devices',   value:onlineDevices,   icon:Activity,   gradient:'linear-gradient(135deg,#4c1d95,#7c3aed)', glow:'rgba(139,92,246,0.28)', sub:`${DEVICES.length-onlineDevices} offline` },
                     { label:'Scans Today',      value:scanStats.total, icon:Radio,      gradient:'linear-gradient(135deg,#92400e,#d97706)', glow:'rgba(245,158,11,0.28)', sub:`${scanStats.verified} verified · ${scanStats.unrecognized} unknown` },
@@ -153,22 +189,22 @@ export default function Attendance() {
             </div>
 
             {/* ── Tab Bar ── */}
-            <div style={S.tabBar}>
+            <div className="tab-bar" style={S.tabBar}>
                 {[
                     { key:'scanner', label:'Live Scanner',       icon:Radio    },
                     { key:'mark',    label:'Student Attendance', icon:UserCheck },
                     { key:'staff',   label:'Staff Attendance',   icon:Users    },
                     { key:'report',  label:'Reports',            icon:BarChart3 },
                 ].map(t => {
-                    const active = tab === t.key;
+                    const isActive = tab === t.key;
                     return (
                         <button key={t.key}
-                            style={{ ...S.tab, ...(active ? S.tabActive : {}) }}
+                            style={{ ...S.tab, ...(isActive ? S.tabActive : {}) }}
                             onClick={()=>setTab(t.key)}
                         >
-                            <t.icon size={15} strokeWidth={active?2.5:2}/>
-                            {t.label}
-                            {active && <span style={S.tabDot}/>}
+                            <t.icon size={15} strokeWidth={isActive?2.5:2}/>
+                            <span className="tab-label">{t.label}</span>
+                            {isActive && <span style={S.tabDot}/>}
                         </button>
                     );
                 })}
@@ -195,7 +231,7 @@ export default function Attendance() {
                         ))}
                     </div>
 
-                    <div style={S.scannerLayout}>
+                    <div className="scanner-layout" style={S.scannerLayout}>
                         {/* ── Left: Device Panel ── */}
                         <div style={S.devicePanel}>
 
@@ -324,19 +360,19 @@ export default function Attendance() {
                                                         {entry.ptype}
                                                     </span>
                                                 </div>
-                                                <div style={{ fontSize:'0.68rem', color:'var(--text-muted)', marginTop:3, display:'flex', gap:8 }}>
+                                                <div style={{ fontSize:'0.68rem', color:'var(--text-muted)', marginTop:3, display:'flex', gap:8, flexWrap:'wrap' }}>
                                                     <span style={{ fontFamily:'monospace' }}>{entry.cardId}</span>
                                                     <span>·</span>
                                                     <span>{entry.deviceName}</span>
                                                 </div>
                                             </div>
-                                            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5, flexShrink:0 }}>
+                                            <div className="log-meta" style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5, flexShrink:0 }}>
                                                 <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:'0.68rem', fontWeight:700, color:mColor }}>
                                                     {entry.method==='RFID'?<CreditCard size={11}/>:<Fingerprint size={11}/>}{entry.method}
                                                 </div>
                                                 <span style={{ fontSize:'0.66rem', fontWeight:700, padding:'2px 8px', borderRadius:5, background:sBg, color:sColor }}>{entry.status}</span>
                                             </div>
-                                            <div style={{ fontSize:'0.68rem', color:'var(--text-muted)', fontFamily:'monospace', flexShrink:0, minWidth:64, textAlign:'right' }}>{entry.time}</div>
+                                            <div className="log-time" style={{ fontSize:'0.68rem', color:'var(--text-muted)', fontFamily:'monospace', flexShrink:0, minWidth:64, textAlign:'right' }}>{entry.time}</div>
                                         </div>
                                     );
                                 })}
@@ -352,7 +388,7 @@ export default function Attendance() {
             {tab === 'mark' && (
                 <>
                     {/* Filters */}
-                    <div style={S.filterBar}>
+                    <div className="filter-bar" style={S.filterBar}>
                         <div style={S.filterGroup}>
                             <label style={S.fieldLbl}>Date</label>
                             <input type="date" style={S.sel} value={date} onChange={e=>setDate(e.target.value)}/>
@@ -360,10 +396,13 @@ export default function Attendance() {
                         <div style={{ ...S.filterGroup, flex:1, maxWidth:320 }}>
                             <label style={S.fieldLbl}>Course</label>
                             <select style={S.sel} value={course} onChange={e=>setCourse(e.target.value)}>
-                                {COURSES.map(c=><option key={c}>{c}</option>)}
+                                {courses.length === 0
+                                    ? <option value="">No courses found</option>
+                                    : courses.map(c=><option key={c}>{c}</option>)
+                                }
                             </select>
                         </div>
-                        <div style={{ display:'flex', gap:8, alignSelf:'flex-end' }}>
+                        <div className="filter-btns" style={{ display:'flex', gap:8, alignSelf:'flex-end', flexWrap:'wrap' }}>
                             <button style={{ ...S.markBtn, background:'rgba(5,150,105,0.10)', color:'#059669', border:'1px solid rgba(5,150,105,0.3)' }} onClick={()=>markAll('Present')}><CheckCircle size={13}/> All Present</button>
                             <button style={{ ...S.markBtn, background:'rgba(220,38,38,0.10)', color:'#dc2626', border:'1px solid rgba(220,38,38,0.3)' }} onClick={()=>markAll('Absent')}><XCircle size={13}/> All Absent</button>
                         </div>
@@ -371,22 +410,22 @@ export default function Attendance() {
 
                     {/* Progress bar */}
                     <div style={S.progressCard}>
-                        <div style={S.progressRow}>
+                        <div className="progress-row" style={S.progressRow}>
                             {[
-                                { label:'Present', val:counts.present, total:STUDENTS.length, color:'#059669', bg:'rgba(5,150,105,0.10)' },
-                                { label:'Absent',  val:counts.absent,  total:STUDENTS.length, color:'#dc2626', bg:'rgba(220,38,38,0.10)' },
-                                { label:'Late',    val:counts.late,    total:STUDENTS.length, color:'#d97706', bg:'rgba(217,119,6,0.10)'  },
+                                { label:'Present', val:counts.present, total:students.length, color:'#059669', bg:'rgba(5,150,105,0.10)' },
+                                { label:'Absent',  val:counts.absent,  total:students.length, color:'#dc2626', bg:'rgba(220,38,38,0.10)' },
+                                { label:'Late',    val:counts.late,    total:students.length, color:'#d97706', bg:'rgba(217,119,6,0.10)'  },
                             ].map(s=>(
                                 <div key={s.label} style={{ ...S.progressStat, background:s.bg }}>
                                     <span style={{ fontSize:'1.4rem', fontWeight:900, fontFamily:'var(--font-display)', color:s.color }}>{s.val}</span>
                                     <span style={{ fontSize:'0.68rem', fontWeight:600, color:s.color }}>{s.label}</span>
-                                    <span style={{ fontSize:'0.62rem', color:'var(--text-muted)' }}>{Math.round(s.val/STUDENTS.length*100)}%</span>
+                                    <span style={{ fontSize:'0.62rem', color:'var(--text-muted)' }}>{students.length ? Math.round(s.val/students.length*100) : 0}%</span>
                                 </div>
                             ))}
                             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:6 }}>
                                 <div style={{ display:'flex', height:10, borderRadius:99, overflow:'hidden', gap:2 }}>
-                                    <div style={{ width:`${counts.present/STUDENTS.length*100}%`, background:'#059669', borderRadius:'99px 0 0 99px' }}/>
-                                    <div style={{ width:`${counts.late/STUDENTS.length*100}%`, background:'#d97706' }}/>
+                                    <div style={{ width:`${students.length ? counts.present/students.length*100 : 0}%`, background:'#059669', borderRadius:'99px 0 0 99px' }}/>
+                                    <div style={{ width:`${students.length ? counts.late/students.length*100 : 0}%`, background:'#d97706' }}/>
                                     <div style={{ flex:1, background:'rgba(220,38,38,0.3)', borderRadius:'0 99px 99px 0' }}/>
                                 </div>
                                 <div style={{ fontSize:'0.68rem', color:'var(--text-muted)' }}>
@@ -398,24 +437,34 @@ export default function Attendance() {
 
                     <div className="card">
                         <div style={{ overflowX:'auto' }}>
-                            {STUDENTS.map((s,i) => {
-                                const status = attn[s.id];
+                            {loadingStudents && (
+                                <div style={{ textAlign:'center', padding:'40px 20px', color:'var(--text-muted)', fontSize:'0.84rem' }}>
+                                    Loading students…
+                                </div>
+                            )}
+                            {!loadingStudents && students.length === 0 && (
+                                <div style={{ textAlign:'center', padding:'40px 20px', color:'var(--text-muted)', fontSize:'0.84rem' }}>
+                                    No students enrolled in this course.
+                                </div>
+                            )}
+                            {!loadingStudents && students.map((s,i) => {
+                                const status = attn[s._id];
                                 return (
-                                    <div key={s.id} style={{ ...S.attRow, background:status==='Absent'?'rgba(220,38,38,0.025)':status==='Late'?'rgba(217,119,6,0.025)':'white' }}>
+                                    <div key={s._id} className="att-row" style={{ ...S.attRow, background:status==='Absent'?'rgba(220,38,38,0.025)':status==='Late'?'rgba(217,119,6,0.025)':'white' }}>
                                         <span style={S.attNum}>{String(i+1).padStart(2,'0')}</span>
                                         <div style={S.attAvatarWrap}>
                                             <div style={{ ...S.attAvatar, background:getAvatarColor(s.name) }}>{s.name[0]}</div>
                                             <div>
                                                 <div style={{ fontWeight:700, fontSize:'0.84rem', color:'var(--text-primary)' }}>{s.name}</div>
-                                                <div style={{ fontSize:'0.67rem', color:'var(--text-muted)', marginTop:2 }}>Roll: {s.roll} · <span style={{ fontFamily:'monospace' }}>{s.cardId}</span></div>
+                                                <div style={{ fontSize:'0.67rem', color:'var(--text-muted)', marginTop:2 }}>Roll: {s.rollNumber||s.studentId} · <span style={{ fontFamily:'monospace' }}>{s.studentId}</span></div>
                                             </div>
                                         </div>
-                                        <div style={S.attBtns}>
+                                        <div className="att-btns" style={S.attBtns}>
                                             {Object.entries(SC).map(([label,cfg]) => {
                                                 const Icon = cfg.icon;
                                                 const on = status===label;
                                                 return (
-                                                    <button key={label} onClick={()=>setStatus(s.id,label)}
+                                                    <button key={label} onClick={()=>setStatus(s._id,label)}
                                                         style={{ ...S.attBtn, ...(on?{ background:cfg.bg, color:cfg.color, border:`1.5px solid ${cfg.border}`, fontWeight:700 }:{}) }}
                                                     >
                                                         <Icon size={12}/>{label}
@@ -429,7 +478,8 @@ export default function Attendance() {
                         </div>
                         <div style={S.saveFooter}>
                             {saved && <span style={{ fontSize:'0.8rem', color:'#059669', fontWeight:700 }}>✓ Attendance saved successfully</span>}
-                            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                            {saveError && <span style={{ fontSize:'0.8rem', color:'#dc2626', fontWeight:700 }}>⚠ {saveError}</span>}
+                            <button className="btn btn-primary" onClick={handleSave} disabled={saving || loadingStudents || !students.length}>
                                 {saving?<><span className="spinner"/> Saving…</>:<><Save size={14}/> Save Attendance</>}
                             </button>
                         </div>
@@ -442,19 +492,19 @@ export default function Attendance() {
             ════════════════════════════════════════ */}
             {tab === 'staff' && (
                 <>
-                    <div style={S.filterBar}>
+                    <div className="filter-bar" style={S.filterBar}>
                         <div style={S.filterGroup}>
                             <label style={S.fieldLbl}>Date</label>
                             <input type="date" style={S.sel} value={sDate} onChange={e=>setSDate(e.target.value)}/>
                         </div>
-                        <div style={{ display:'flex', gap:8, alignSelf:'flex-end' }}>
+                        <div className="filter-btns" style={{ display:'flex', gap:8, alignSelf:'flex-end', flexWrap:'wrap' }}>
                             <button style={{ ...S.markBtn, background:'rgba(5,150,105,0.10)', color:'#059669', border:'1px solid rgba(5,150,105,0.3)' }} onClick={()=>markAllSt('Present')}><CheckCircle size={13}/> All Present</button>
                             <button style={{ ...S.markBtn, background:'rgba(220,38,38,0.10)', color:'#dc2626', border:'1px solid rgba(220,38,38,0.3)' }} onClick={()=>markAllSt('Absent')}><XCircle size={13}/> All Absent</button>
                         </div>
                     </div>
 
                     <div style={S.progressCard}>
-                        <div style={S.progressRow}>
+                        <div className="progress-row" style={S.progressRow}>
                             {[
                                 { label:'Present', val:sCounts.present, total:STAFF.length, color:'#059669', bg:'rgba(5,150,105,0.10)' },
                                 { label:'Absent',  val:sCounts.absent,  total:STAFF.length, color:'#dc2626', bg:'rgba(220,38,38,0.10)' },
@@ -483,7 +533,7 @@ export default function Attendance() {
                         {STAFF.map((s,i) => {
                             const status = staffAttn[s.id];
                             return (
-                                <div key={s.id} style={{ ...S.attRow, background:status==='Absent'?'rgba(220,38,38,0.025)':status==='Late'?'rgba(217,119,6,0.025)':'white' }}>
+                                <div key={s.id} className="att-row" style={{ ...S.attRow, background:status==='Absent'?'rgba(220,38,38,0.025)':status==='Late'?'rgba(217,119,6,0.025)':'white' }}>
                                     <span style={S.attNum}>{String(i+1).padStart(2,'0')}</span>
                                     <div style={S.attAvatarWrap}>
                                         <div style={{ ...S.attAvatar, background:getAvatarColor(s.name) }}>{s.name[0]}</div>
@@ -492,7 +542,7 @@ export default function Attendance() {
                                             <div style={{ fontSize:'0.67rem', color:'var(--text-muted)', marginTop:2 }}>{s.role} · {s.dept}</div>
                                         </div>
                                     </div>
-                                    <div style={S.attBtns}>
+                                    <div className="att-btns" style={S.attBtns}>
                                         {Object.entries(SC).map(([label,cfg]) => {
                                             const Icon = cfg.icon;
                                             const on = status===label;
@@ -524,10 +574,10 @@ export default function Attendance() {
             {tab === 'report' && (
                 <>
                     <div className="card" style={{ marginBottom:18 }}>
-                        <div className="card-header">
+                        <div className="card-header report-card-header">
                             <div><h2>Student Monthly Report</h2><p>Student-wise attendance summary</p></div>
-                            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                                <select style={S.sel} defaultValue={COURSES[0]}>{COURSES.map(c=><option key={c}>{c}</option>)}</select>
+                            <div className="report-header-actions" style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                                <select style={S.sel} defaultValue={courses[0]}>{courses.map(c=><option key={c}>{c}</option>)}</select>
                                 <input type="month" style={S.sel} defaultValue="2026-06"/>
                                 <ExportMenu title="Student_Attendance" rows={REPORT} columns={[
                                     { label:'Student', key:'name' }, { label:'Roll No', key:'roll' },
@@ -574,9 +624,9 @@ export default function Attendance() {
                     </div>
 
                     <div className="card">
-                        <div className="card-header">
+                        <div className="card-header report-card-header">
                             <div><h2>Staff Monthly Report</h2><p>Faculty & staff attendance summary</p></div>
-                            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                            <div className="report-header-actions" style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
                                 <input type="month" style={S.sel} defaultValue="2026-06"/>
                                 <ExportMenu title="Staff_Attendance" rows={STAFF_REPORT} columns={[
                                     { label:'Staff Member', key:'name' }, { label:'Department', key:'dept' },
@@ -625,7 +675,40 @@ export default function Attendance() {
             <style>{`
                 @keyframes scanFlash { 0%{background:#fefce8} 100%{background:white} }
                 @keyframes pulse     { 0%,100%{opacity:1} 50%{opacity:0.3} }
-                @media(max-width:900px){ .scanner-layout{grid-template-columns:1fr!important;} }
+
+                /* ── 900px: tablet ── */
+                @media(max-width:900px){
+                    .scanner-layout { grid-template-columns:1fr !important; }
+                    .hero-grid { grid-template-columns:repeat(2,1fr) !important; }
+                    .report-card-header { flex-wrap:wrap !important; gap:10px !important; }
+                    .report-header-actions { width:100%; }
+                }
+
+                /* ── 640px: large phone / small tablet ── */
+                @media(max-width:640px){
+                    .hero-grid { gap:10px !important; }
+                    .tab-bar { overflow-x:auto; gap:2px !important; padding:4px 6px !important; }
+                    .tab-bar button { flex:0 0 auto; padding:8px 10px !important; font-size:0.72rem !important; gap:4px !important; }
+                    .filter-bar { flex-direction:column !important; align-items:stretch !important; }
+                    .filter-bar > * { width:100% !important; max-width:100% !important; align-self:stretch !important; }
+                    .filter-btns { justify-content:flex-start !important; }
+                    .progress-row { flex-direction:column !important; }
+                    .progress-row > div:last-child { width:100% !important; }
+                    .att-row { flex-wrap:wrap !important; row-gap:8px !important; padding:10px 14px !important; }
+                    .att-btns { width:100% !important; justify-content:flex-start !important; }
+                    .log-meta { display:none !important; }
+                    .log-time { min-width:auto !important; }
+                }
+
+                /* ── 480px: small phone ── */
+                @media(max-width:480px){
+                    .hero-grid { grid-template-columns:1fr 1fr !important; gap:8px !important; }
+                    .tab-label { display:none; }
+                    .tab-bar button { padding:10px 12px !important; }
+                    .scan-chips { gap:6px !important; }
+                    .att-row { padding:10px 12px !important; }
+                    .att-btns button { padding:5px 9px !important; font-size:0.7rem !important; }
+                }
             `}</style>
         </div>
     );
@@ -645,7 +728,7 @@ const S = {
 
     /* Tab bar */
     tabBar: { display:'flex', alignItems:'center', gap:2, background:'white', border:'1px solid var(--border)', borderRadius:12, padding:'6px 8px', marginBottom:18, boxShadow:'var(--shadow-sm)' },
-    tab:    { display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:9, border:'none', background:'none', color:'var(--text-muted)', fontSize:'0.82rem', fontWeight:600, cursor:'pointer', transition:'all 0.15s', position:'relative' },
+    tab:    { display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:9, border:'none', background:'none', color:'var(--text-muted)', fontSize:'0.82rem', fontWeight:600, cursor:'pointer', transition:'all 0.15s', position:'relative', whiteSpace:'nowrap' },
     tabActive: { background:'rgba(37,99,235,0.08)', color:'#2563eb' },
     tabDot:    { position:'absolute', bottom:5, left:'50%', transform:'translateX(-50%)', width:4, height:4, borderRadius:'50%', background:'#2563eb' },
 
@@ -700,7 +783,7 @@ const S = {
     attBtns:      { display:'flex', gap:6, flexShrink:0 },
     attBtn:       { display:'inline-flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8, border:'1.5px solid var(--border)', background:'white', fontSize:'0.75rem', fontWeight:500, color:'var(--text-muted)', cursor:'pointer', transition:'all 0.12s' },
 
-    saveFooter: { display:'flex', justifyContent:'flex-end', alignItems:'center', gap:14, padding:'14px 20px', borderTop:'1px solid var(--border)', background:'#fafbfc' },
+    saveFooter: { display:'flex', justifyContent:'flex-end', alignItems:'center', gap:14, padding:'14px 20px', borderTop:'1px solid var(--border)', background:'#fafbfc', flexWrap:'wrap' },
 
     reportAvatar: { width:32, height:32, borderRadius:8, display:'grid', placeItems:'center', color:'white', fontWeight:800, fontSize:'0.82rem', flexShrink:0 },
 };

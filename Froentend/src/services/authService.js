@@ -1,6 +1,7 @@
 import {
     signInWithEmailAndPassword,
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     sendPasswordResetEmail,
     fetchSignInMethodsForEmail,
@@ -14,9 +15,33 @@ import { api } from './api.js';
 export const authService = {
 
     login: async (email, password) => {
+        const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+        // Try backend (MongoDB) first
+        try {
+            const res = await fetch(`${BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.setItem('erp_token', data.token);
+                localStorage.setItem('erp_auth_source', 'backend');
+                return data.data;
+            }
+            // Backend responded with auth error — throw immediately, don't try Firebase
+            throw new Error(data.message || 'Invalid email or password');
+        } catch (err) {
+            // Only fall through to Firebase on network errors (TypeError = fetch failed)
+            if (!(err instanceof TypeError)) throw err;
+        }
+
+        // Fallback: Firebase Auth (only when backend is unreachable)
         const credential = await signInWithEmailAndPassword(auth, email, password);
-        const token = await credential.user.getIdToken();
-        localStorage.setItem('erp_token', token);
+        const fbToken = await credential.user.getIdToken();
+        localStorage.setItem('erp_token', fbToken);
+        localStorage.setItem('erp_auth_source', 'firebase');
         return {
             id:    credential.user.uid,
             name:  credential.user.displayName || email.split('@')[0],
@@ -26,33 +51,45 @@ export const authService = {
         };
     },
 
-    loginWithGoogle: async () => {
-        const credential = await signInWithPopup(auth, googleProvider);
-        const token = await credential.user.getIdToken();
-        localStorage.setItem('erp_token', token);
+    loginWithGoogle: () => {
+        // Use redirect instead of popup — avoids browser popup-blocking
+        return signInWithRedirect(auth, googleProvider);
+    },
+
+    getGoogleRedirectResult: async () => {
+        const result = await getRedirectResult(auth);
+        if (!result) return null;
+        const fbToken = await result.user.getIdToken();
+        localStorage.setItem('erp_token', fbToken);
+        localStorage.setItem('erp_auth_source', 'firebase');
         return {
-            id:    credential.user.uid,
-            name:  credential.user.displayName,
-            email: credential.user.email,
+            id:    result.user.uid,
+            name:  result.user.displayName,
+            email: result.user.email,
             role:  'Administrator',
-            photo: credential.user.photoURL,
+            photo: result.user.photoURL,
         };
     },
 
     loginStudent: async (email, password) => {
-        await new Promise(r => setTimeout(r, 600));
-        return {
-            id: 'STU101', name: 'Riya Student', email,
-            role: 'Student', course: 'B.Sc Computer Science',
-            year: '2nd Year', section: 'A', phone: '98765 43210',
-            feesStatus: 'Pending ₹12,000', latestGrade: 'A-',
-        };
+        const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res  = await fetch(`${BASE}/auth/login/student`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Invalid student email or password');
+        localStorage.setItem('erp_token', data.token);
+        localStorage.setItem('erp_auth_source', 'backend');
+        return data.data;
     },
 
     logout: async () => {
         await signOut(auth);
         localStorage.removeItem('erp_token');
         localStorage.removeItem('erp_user');
+        localStorage.removeItem('erp_auth_source');
     },
 
     sendPasswordResetEmail: async (email) => {

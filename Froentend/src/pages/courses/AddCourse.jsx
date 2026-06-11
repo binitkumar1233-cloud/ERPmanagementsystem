@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../services/api.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { ArrowLeft, Save, BookOpen } from 'lucide-react';
 import { DEPARTMENTS } from '../../utils/constants.js';
@@ -9,6 +10,7 @@ const DURATIONS = ['1 Year', '2 Years', '3 Years', '4 Years', '5 Years'];
 export default function AddCourse() {
     const navigate = useNavigate();
     const [saving, setSaving] = useState(false);
+    const [submitError, setSubmitError] = useState('');
     const [form, setForm] = useState({
         name: '', code: '', dept: '', duration: '3 Years',
         seats: '', credits: '', feePerYear: '', description: '',
@@ -19,10 +21,25 @@ export default function AddCourse() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitError('');
         setSaving(true);
-        await new Promise(r => setTimeout(r, 800));
-        setSaving(false);
-        navigate('/courses');
+        try {
+            await api.post('/courses', {
+                name: form.name,
+                code: form.code,
+                dept: form.dept,
+                duration: form.duration,
+                seats: Number(form.seats),
+                fees: Number(form.feePerYear),
+                description: form.description || undefined,
+                status: form.status,
+            });
+            navigate('/courses');
+        } catch (err) {
+            setSubmitError(err.message);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const F = ({ label, req, children, className = '' }) => (
@@ -111,6 +128,11 @@ export default function AddCourse() {
                         </div>
                     </div>
 
+                    {submitError && (
+                        <div style={{ marginBottom: 12, padding: '10px 14px', background: '#fff5f5', border: '1.5px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: '0.82rem', fontWeight: 600 }}>
+                            ⚠ {submitError}
+                        </div>
+                    )}
                     <div className="form-actions">
                         <button type="button" className="btn btn-secondary" onClick={() => navigate('/courses')}>Cancel</button>
                         <button type="submit" className="btn btn-primary" disabled={saving}>
