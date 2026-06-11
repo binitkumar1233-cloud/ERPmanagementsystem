@@ -1,8 +1,7 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, BookOpen, Shield, Users, BarChart2 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
-import { authService } from '../../services/authService.js';
 import Logo from '../../components/common/Logo.jsx';
 
 const FEATURES = [
@@ -36,21 +35,6 @@ export default function Login() {
             setLoading(false);
         }
     };
-
-    /* Pick up Google redirect result when returning from Google sign-in */
-    useEffect(() => {
-        setGoogleLoading(true);
-        authService.getGoogleRedirectResult()
-            .then(userData => {
-                if (!userData) return;
-                localStorage.setItem('erp_user', JSON.stringify(userData));
-                window.location.href = '/dashboard';
-            })
-            .catch(err => {
-                setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
-            })
-            .finally(() => setGoogleLoading(false));
-    }, []);
 
     const handleGoogle = () => {
         setError('');

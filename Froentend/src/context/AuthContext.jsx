@@ -12,21 +12,50 @@ export function AuthProvider({ children }) {
     });
     const [authLoading, setAuthLoading] = useState(true);
 
-    /* Keep Firebase token fresh — only for Firebase-authenticated users */
     useEffect(() => {
-        // Fallback: if Firebase never responds (blocked, offline), unblock the app
         const timeout = setTimeout(() => setAuthLoading(false), 5000);
 
         const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
             clearTimeout(timeout);
-            // Only refresh erp_token from Firebase when the session was originally
-            // established via Firebase (Google/email-Firebase). Backend JWT users must
-            // NOT have their token overwritten — that would cause 401 on every page reload.
-            if (firebaseUser && localStorage.getItem('erp_auth_source') === 'firebase') {
-                const token = await firebaseUser.getIdToken();
-                localStorage.setItem('erp_token', token);
+
+            const authSource = localStorage.getItem('erp_auth_source');
+
+            if (firebaseUser && authSource === 'firebase') {
+                // Existing Firebase session — just keep the token fresh
+                try {
+                    const token = await firebaseUser.getIdToken();
+                    localStorage.setItem('erp_token', token);
+                } catch { /* ignore token refresh errors */ }
+                setAuthLoading(false);
+
+            } else if (firebaseUser && !authSource) {
+                // No auth source set but Firebase has a user — this is the Google
+                // redirect result landing. Set up the session and go to dashboard.
+                try {
+                    const token = await firebaseUser.getIdToken();
+                    const userData = {
+                        id:    firebaseUser.uid,
+                        name:  firebaseUser.displayName,
+                        email: firebaseUser.email,
+                        role:  'Administrator',
+                        photo: firebaseUser.photoURL,
+                    };
+                    localStorage.setItem('erp_token', token);
+                    localStorage.setItem('erp_auth_source', 'firebase');
+                    localStorage.setItem('erp_user', JSON.stringify(userData));
+                    setUser(userData);
+                    setAuthLoading(false);
+                    if (window.location.pathname === '/login' || window.location.pathname === '/') {
+                        window.location.href = '/dashboard';
+                    }
+                } catch {
+                    setAuthLoading(false);
+                }
+
+            } else {
+                // Backend JWT user or no user — don't touch erp_token
+                setAuthLoading(false);
             }
-            setAuthLoading(false);
         }, () => {
             clearTimeout(timeout);
             setAuthLoading(false);
