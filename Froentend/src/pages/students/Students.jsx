@@ -86,7 +86,25 @@ export default function Students() {
     };
 
     if (loading) return <div className="erp-page"><Navbar title="Students" subtitle="Manage all student records" /><div className="empty-state"><p>Loading students…</p></div></div>;
-    if (apiError) return <div className="erp-page"><Navbar title="Students" subtitle="Manage all student records" /><div className="empty-state"><p style={{color:'#dc2626'}}>⚠ Failed to load: {apiError}</p></div></div>;
+    if (apiError) return (
+        <div className="erp-page">
+            <Navbar title="Students" subtitle="Manage all student records" />
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, gap:16, textAlign:'center', padding:32 }}>
+                <div style={{ fontSize:48 }}>🔌</div>
+                <div style={{ fontSize:'1.2rem', fontWeight:700, color:'#dc2626' }}>Backend server is not running</div>
+                <div style={{ color:'#64748b', maxWidth:420, lineHeight:1.6 }}>
+                    Open a terminal in the project folder and run:
+                </div>
+                <div style={{ background:'#1e293b', color:'#86efac', fontFamily:'monospace', fontSize:'0.95rem', padding:'12px 24px', borderRadius:8, letterSpacing:0.3 }}>
+                    cd Backend &amp;&amp; npm run dev
+                </div>
+                <div style={{ color:'#94a3b8', fontSize:'0.85rem' }}>Then refresh this page — your students will appear here.</div>
+                <Link to="/students/add" style={{ marginTop:8, padding:'10px 24px', background:'#4f46e5', color:'#fff', borderRadius:8, fontWeight:600, textDecoration:'none', fontSize:'0.9rem' }}>
+                    + Add First Student
+                </Link>
+            </div>
+        </div>
+    );
 
     const filtered = data
         .filter(s => {

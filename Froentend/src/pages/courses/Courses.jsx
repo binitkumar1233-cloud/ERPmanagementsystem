@@ -97,7 +97,19 @@ export default function Courses() {
     const DEPTS = ['All', ...new Set(data.map(c => c.dept))];
 
     if (loading) return <div className="erp-page"><Navbar title="Courses" subtitle="Manage academic programs and courses" /><div className="empty-state"><p>Loading courses…</p></div></div>;
-    if (apiError) return <div className="erp-page"><Navbar title="Courses" subtitle="Manage academic programs and courses" /><div className="empty-state"><p style={{color:'#dc2626'}}>⚠ Failed to load: {apiError}</p></div></div>;
+    if (apiError) return (
+        <div className="erp-page">
+            <Navbar title="Courses" subtitle="Manage academic programs and courses" />
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, gap:16, textAlign:'center', padding:32 }}>
+                <div style={{ fontSize:48 }}>🔌</div>
+                <div style={{ fontSize:'1.2rem', fontWeight:700, color:'#dc2626' }}>Backend server is not running</div>
+                <div style={{ background:'#1e293b', color:'#86efac', fontFamily:'monospace', fontSize:'0.95rem', padding:'12px 24px', borderRadius:8 }}>
+                    cd Backend &amp;&amp; npm run dev
+                </div>
+                <div style={{ color:'#94a3b8', fontSize:'0.85rem' }}>Then refresh this page.</div>
+            </div>
+        </div>
+    );
 
     const totalSeats    = data.reduce((s,c) => s+c.seats,    0);
     const totalEnrolled = data.reduce((s,c) => s+c.enrolled, 0);
