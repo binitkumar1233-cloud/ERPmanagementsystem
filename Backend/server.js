@@ -30,8 +30,19 @@ connectDB();
 const app = express();
 
 /* ── Core Middleware ── */
+const ALLOWED_ORIGINS = (process.env.CLIENT_URL || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .concat(['http://localhost:5173', 'http://localhost:5174']);
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, cb) => {
+        // allow requests with no origin (mobile apps, curl, Postman)
+        if (!origin) return cb(null, true);
+        if (ALLOWED_ORIGINS.some(o => origin.startsWith(o))) return cb(null, true);
+        cb(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
