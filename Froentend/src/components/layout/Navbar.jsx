@@ -5,7 +5,7 @@ import {
     X, Check, AlertCircle, Info, Clock,
     Sun, Moon, Monitor, Plus, BookOpen,
     UserPlus, FileText, CalendarDays, Wifi, WifiOff,
-    GraduationCap, ChevronRight,
+    GraduationCap, ChevronRight, Menu,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
@@ -166,6 +166,13 @@ export default function Navbar({ title = 'Dashboard', subtitle = '' }) {
 
                 {/* LEFT */}
                 <div className="nb-left">
+                    <button
+                        className="sidebar-hamburger"
+                        onClick={() => window.dispatchEvent(new CustomEvent('toggle-mobile-sidebar'))}
+                        aria-label="Toggle menu"
+                    >
+                        <Menu size={20} />
+                    </button>
                     <h1 className="nb-title">{title}</h1>
                     <span className="nb-subtitle">
                         {subtitle || `${greeting}, ${user?.name?.split(' ')[0] || 'User'}. ${emoji}`}
@@ -412,7 +419,9 @@ export default function Navbar({ title = 'Dashboard', subtitle = '' }) {
                 }
 
                 /* LEFT */
-                .nb-left { display:flex; flex-direction:column; justify-content:center; flex-shrink:0; }
+                .nb-left { display:flex; flex-direction:column; justify-content:center; flex-shrink:0; gap:0; }
+                .nb-left .sidebar-hamburger { display:none; }
+                @media (max-width:1024px) { .nb-left .sidebar-hamburger { display:flex !important; } }
                 .nb-title {
                     font-size:1.05rem; font-weight:800; color:var(--text-primary); line-height:1;
                     background: linear-gradient(135deg, var(--text-primary), #4f46e5);
@@ -684,7 +693,21 @@ export default function Navbar({ title = 'Dashboard', subtitle = '' }) {
                 /* Responsive */
                 @media (max-width:1100px) { .nb-clock, .nb-pill { display:none; } }
                 @media (max-width:900px)  { .nb-search { width:130px; } .nb-kbd { display:none; } }
-                @media (max-width:760px)  { .navbar { left:0; padding:0 12px; } .nb-clock, .nb-pill { display:none; } }
+                @media (max-width:1024px) {
+                    .navbar { left:0 !important; padding:0 14px; }
+                    .nb-clock, .nb-pill { display:none; }
+                    .nb-left { flex-direction: row; align-items: center; gap: 10px; justify-content: flex-start; }
+                    .nb-title { font-size: 0.95rem !important; }
+                    .nb-subtitle { display: none; }
+                }
+                @media (max-width:600px) {
+                    .nb-search-box, .nb-wrap:has(.nb-search) { display:none !important; }
+                    .nb-user-text { display: none; }
+                    .nb-user-btn { min-width: unset; padding: 5px; }
+                    .nb-btn { width: 32px; height: 32px; }
+                    .nb-notif-panel { right: -10px; width: calc(100vw - 20px); }
+                    .nb-user-panel { right: -10px; width: calc(100vw - 20px); }
+                }
             `}</style>
         </>
     );

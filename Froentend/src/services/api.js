@@ -1,4 +1,40 @@
+import { auth } from '../config/firebase.js';
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+let _refreshing = false;
+
+/* Try to exchange a Firebase token for a backend JWT, return new token or null */
+async function tryExchangeFirebaseToken() {
+    if (_refreshing) return null;
+    _refreshing = true;
+    try {
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) return null;
+
+        const res = await fetch(`${BASE_URL}/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                uid:   firebaseUser.uid,
+                name:  firebaseUser.displayName,
+                email: firebaseUser.email,
+                photo: firebaseUser.photoURL,
+            }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        localStorage.setItem('erp_token', data.token);
+        localStorage.setItem('erp_auth_source', 'backend');
+        // Update stored user with fresh backend data
+        if (data.data) localStorage.setItem('erp_user', JSON.stringify(data.data));
+        return data.token;
+    } catch {
+        return null;
+    } finally {
+        _refreshing = false;
+    }
+}
 
 async function request(method, path, data) {
     const token = localStorage.getItem('erp_token');
@@ -17,13 +53,28 @@ async function request(method, path, data) {
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
-        // Session expired or invalid — clear auth and redirect to login
+
         if (res.status === 401) {
+            const authSource = localStorage.getItem('erp_auth_source');
+
+            // If the stored token is a Firebase token, try upgrading to backend JWT first
+            if (authSource === 'firebase') {
+                const newToken = await tryExchangeFirebaseToken();
+                if (newToken) {
+                    // Retry original request with the new backend JWT
+                    config.headers.Authorization = `Bearer ${newToken}`;
+                    const retry = await fetch(`${BASE_URL}${path}`, config);
+                    if (retry.ok) return retry.json();
+                }
+            }
+
+            // Could not refresh — clear session and redirect
             localStorage.removeItem('erp_token');
             localStorage.removeItem('erp_user');
             localStorage.removeItem('erp_auth_source');
             window.location.href = '/login';
         }
+
         throw new Error(err.message || 'Something went wrong');
     }
 

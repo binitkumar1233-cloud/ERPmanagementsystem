@@ -36,7 +36,9 @@ import AdmissionForm from '../pages/admissions/AdmissionForm.jsx';
 /* ── Protected wrapper ── */
 function Protected({ children }) {
     const { isAuthenticated } = useContext(AuthContext);
-    return isAuthenticated
+    // Also check localStorage — React state may not be committed yet right after login
+    const hasStoredUser = !!localStorage.getItem('erp_user');
+    return (isAuthenticated || hasStoredUser)
         ? children
         : <Navigate to="/login" replace />;
 }

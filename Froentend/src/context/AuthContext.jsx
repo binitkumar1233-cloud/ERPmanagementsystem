@@ -13,76 +13,58 @@ export function AuthProvider({ children }) {
     const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
-        const timeout = setTimeout(() => setAuthLoading(false), 5000);
+        // Emergency fallback — releases loading gate if Firebase never fires
+        const timeout = setTimeout(() => setAuthLoading(false), 8000);
 
-        const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-            clearTimeout(timeout);
+        // Hold the loading gate open until BOTH the redirect-result check AND the
+        // auth-state check complete, so the login page never flashes mid-flow.
+        let redirectDone = false;
+        let stateDone    = false;
+        const release = () => {
+            if (redirectDone && stateDone) {
+                clearTimeout(timeout);
+                setAuthLoading(false);
+            }
+        };
 
-            const authSource  = localStorage.getItem('erp_auth_source');
-            const onLoginPage = window.location.pathname === '/login' || window.location.pathname === '/';
-
-            if (firebaseUser && (onLoginPage || !authSource)) {
-                // Firebase user on the login page (Google redirect just returned)
-                // OR first-ever session — exchange for a backend JWT.
-                try {
-                    const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                    let userData, token;
-
-                    try {
-                        const res = await fetch(`${BASE}/auth/google`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                uid:   firebaseUser.uid,
-                                name:  firebaseUser.displayName,
-                                email: firebaseUser.email,
-                                photo: firebaseUser.photoURL,
-                            }),
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            token    = data.token;
-                            userData = data.data;
-                            localStorage.setItem('erp_auth_source', 'backend');
-                        }
-                    } catch { /* backend offline — fall through to Firebase token */ }
-
-                    if (!token) {
-                        token = await firebaseUser.getIdToken();
-                        userData = {
-                            id:    firebaseUser.uid,
-                            name:  firebaseUser.displayName,
-                            email: firebaseUser.email,
-                            role:  'Administrator',
-                            photo: firebaseUser.photoURL,
-                        };
-                        localStorage.setItem('erp_auth_source', 'firebase');
-                    }
-
-                    localStorage.setItem('erp_token', token);
+        // Pick up a Google redirect result (if the user just came back from Google OAuth).
+        // Returns null on every normal page load — safe to call unconditionally.
+        authService.getGoogleRedirectResult()
+            .then((userData) => {
+                if (userData) {
                     localStorage.setItem('erp_user', JSON.stringify(userData));
                     setUser(userData);
-                    setAuthLoading(false);
-                    if (onLoginPage) window.location.href = '/dashboard';
-                } catch {
-                    setAuthLoading(false);
+                    // Redirect result means we just signed in — go to dashboard
+                    window.location.replace('/dashboard');
+                    // Don't release loading gate — the page is navigating away
+                    return;
                 }
+                redirectDone = true;
+                release();
+            })
+            .catch((err) => {
+                console.error('[Auth] getGoogleRedirectResult error:', err);
+                redirectDone = true;
+                release();
+            });
 
-            } else if (firebaseUser && authSource === 'firebase') {
-                // Existing Firebase session on an interior page — just refresh the token
+        const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+            const authSource = localStorage.getItem('erp_auth_source');
+            const storedUser = localStorage.getItem('erp_user');
+
+            // Silently refresh a stored Firebase token on subsequent page loads
+            if (storedUser && authSource === 'firebase' && firebaseUser) {
                 try {
                     const token = await firebaseUser.getIdToken();
                     localStorage.setItem('erp_token', token);
                 } catch { /* ignore */ }
-                setAuthLoading(false);
-
-            } else {
-                // Backend JWT session or logged-out — don't touch erp_token
-                setAuthLoading(false);
             }
+
+            stateDone = true;
+            release();
         }, () => {
-            clearTimeout(timeout);
-            setAuthLoading(false);
+            stateDone = true;
+            release();
         });
 
         return () => { unsub(); clearTimeout(timeout); };
@@ -90,20 +72,20 @@ export function AuthProvider({ children }) {
 
     const login = useCallback(async (email, password) => {
         const userData = await authService.login(email, password);
-        setUser(userData);
         localStorage.setItem('erp_user', JSON.stringify(userData));
+        setUser(userData);
         return userData;
     }, []);
 
-    // loginWithGoogle triggers signInWithRedirect — page navigates away immediately,
-    // so there is no return value to process here. The redirect result is handled
-    // by getGoogleRedirectResult in Login.jsx's useEffect after the page returns.
-    const loginWithGoogle = useCallback(() => authService.loginWithGoogle(), []);
+    const loginWithGoogle = useCallback(
+        () => authService.loginWithGoogle(), // triggers redirect — no return value
+        []
+    );
 
     const loginStudent = useCallback(async (email, password) => {
         const userData = await authService.loginStudent(email, password);
-        setUser(userData);
         localStorage.setItem('erp_user', JSON.stringify(userData));
+        setUser(userData);
         return userData;
     }, []);
 

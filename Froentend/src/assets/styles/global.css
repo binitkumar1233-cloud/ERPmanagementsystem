@@ -582,9 +582,64 @@ tbody tr:hover td { background: var(--bg-hover); }
     .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+    :root { --sidebar-width: 0px; }
+    .erp-page { margin-left: 0; padding: 20px 16px; }
+    .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Mobile ── */
 @media (max-width: 768px) {
-    .erp-page { padding: 16px; margin-left: 0; }
-    .stats-grid-4 { grid-template-columns: 1fr 1fr; }
+    :root { --sidebar-width: 0px; --navbar-height: 56px; }
+
+    .erp-page { padding: 12px; margin-left: 0 !important; }
+    .stats-grid-4 { grid-template-columns: 1fr 1fr; gap: 10px; }
     .form-grid { grid-template-columns: 1fr; }
     .col-full { grid-column: 1; }
+
+    /* Navbar mobile */
+    .nb-clock-date { display: none; }
+    .nb-clock { font-size: 0.75rem; }
+    .nb-search-box { display: none !important; }
+    .nb-title { font-size: 1rem !important; }
+    .nb-subtitle { display: none; }
+
+    /* Login page — stack panels vertically */
+    .login-root { flex-direction: column; }
+    .login-panel { display: none; }
+    .login-form-side { width: 100%; min-height: 100vh; padding: 24px 16px; }
+    .login-form-wrap { max-width: 100%; }
+
+    /* Tables — horizontal scroll */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 600px; }
+
+    /* Cards stack */
+    .card-grid-2, .card-grid-3 { grid-template-columns: 1fr !important; }
+
+    /* Sidebar overlay (set by JS) */
+    .sidebar-mobile-overlay {
+        display: block;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 99;
+    }
+
+    /* Hamburger button */
+    .sidebar-hamburger {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 36px; height: 36px;
+        border-radius: 8px;
+        background: rgba(79,70,229,0.1);
+        border: none; cursor: pointer;
+        color: #4f46e5;
+        flex-shrink: 0;
+    }
 }
+
+/* Hide hamburger on desktop */
+.sidebar-hamburger { display: none; }
+.sidebar-mobile-overlay { display: none; }

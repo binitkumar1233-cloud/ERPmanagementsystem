@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, GraduationCap, Users, BookOpen,
@@ -37,11 +37,12 @@ const CAMPUS = [
 const STUDENT_PORTAL = { label: 'Student Portal', icon: UserCircle, to: '/student-login' };
 const ADMIN_PANEL    = { label: 'Admin Panel',    icon: Shield,     to: '/admin-panel'  };
 
-function NavItem({ label, icon: Icon, to, collapsed, accent = null }) {
+function NavItem({ label, icon: Icon, to, collapsed, accent = null, onNavClick }) {
     return (
         <NavLink
             to={to}
             title={collapsed ? label : undefined}
+            onClick={onNavClick}
             style={({ isActive }) => ({
                 ...styles.link,
                 ...(collapsed ? styles.linkCollapsed : {}),
@@ -77,20 +78,38 @@ function SectionLabel({ label, collapsed }) {
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+
+    useEffect(() => {
+        const onToggle = () => setMobileOpen(v => !v);
+        window.addEventListener('toggle-mobile-sidebar', onToggle);
+        return () => window.removeEventListener('toggle-mobile-sidebar', onToggle);
+    }, []);
+
+    const closeMobile = () => setMobileOpen(false);
 
     return (
         <>
+            {mobileOpen && (
+                <div className="sidebar-mobile-overlay" onClick={closeMobile} />
+            )}
+
             <style>{`
                 :root { --sidebar-width: ${collapsed ? '64px' : '260px'}; }
-                .sidebar-transition { transition: width 0.24s cubic-bezier(0.4,0,0.2,1); }
+                .sidebar-transition { transition: width 0.24s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1); }
                 .sb-link:hover { background: rgba(255,255,255,0.06) !important; color: rgba(255,255,255,0.9) !important; }
                 .sidebar-transition::-webkit-scrollbar { width: 3px; }
                 .sidebar-transition::-webkit-scrollbar-thumb { background: rgba(79,70,229,0.3); border-radius: 99px; }
+                @media (max-width: 1024px) {
+                    :root { --sidebar-width: 0px !important; }
+                    .sidebar-transition { transform: translateX(-100%); width: 260px !important; }
+                    .sidebar-transition.sidebar--mobile-open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.35); }
+                }
             `}</style>
 
             <aside
                 style={{ ...styles.sidebar, width: collapsed ? 64 : 260 }}
-                className="sidebar-transition"
+                className={`sidebar-transition${mobileOpen ? ' sidebar--mobile-open' : ''}`}
             >
                 {/* ── Brand ── */}
                 <div style={{
@@ -135,36 +154,36 @@ export default function Sidebar() {
                     <SectionLabel label="Main Navigation" collapsed={collapsed} />
                     <nav>
                         {NAV.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed} />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} onNavClick={closeMobile} />
                         ))}
                     </nav>
 
                     <SectionLabel label="Admissions & Onboarding" collapsed={collapsed} />
                     <nav>
                         {ADMISSIONS.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#f59e0b" />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#f59e0b" onNavClick={closeMobile} />
                         ))}
                     </nav>
 
                     <SectionLabel label="E-Learning & Assessments" collapsed={collapsed} />
                     <nav>
                         {ELEARNING.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#8b5cf6" />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#8b5cf6" onNavClick={closeMobile} />
                         ))}
                     </nav>
 
                     <SectionLabel label="Campus Services" collapsed={collapsed} />
                     <nav>
                         {CAMPUS.map(item => (
-                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#06b6d4" />
+                            <NavItem key={item.to} {...item} collapsed={collapsed} accent="#06b6d4" onNavClick={closeMobile} />
                         ))}
                     </nav>
 
                     <SectionLabel label="Administration" collapsed={collapsed} />
-                    <NavItem {...ADMIN_PANEL} collapsed={collapsed} accent="#ef4444" />
+                    <NavItem {...ADMIN_PANEL} collapsed={collapsed} accent="#ef4444" onNavClick={closeMobile} />
 
                     <SectionLabel label="Student Access" collapsed={collapsed} />
-                    <NavItem {...STUDENT_PORTAL} collapsed={collapsed} accent="#10b981" />
+                    <NavItem {...STUDENT_PORTAL} collapsed={collapsed} accent="#10b981" onNavClick={closeMobile} />
                 </div>
 
                 {/* ── Bottom ── */}

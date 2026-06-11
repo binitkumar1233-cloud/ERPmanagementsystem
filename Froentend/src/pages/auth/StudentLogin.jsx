@@ -1,6 +1,8 @@
 import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Users, BarChart2, Shield } from 'lucide-react';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../../config/firebase.js';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import Logo from '../../components/common/Logo.jsx';
 
@@ -11,13 +13,13 @@ const FEATURES = [
 ];
 
 export default function StudentLogin() {
-    const { loginStudent, loginWithGoogle } = useContext(AuthContext);
+    const { loginStudent } = useContext(AuthContext);
     const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPass, setShowPass] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading]             = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError]                 = useState('');
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -25,10 +27,26 @@ export default function StudentLogin() {
         setError('');
         setGoogleLoading(true);
         try {
-            await loginWithGoogle();
-            navigate('/student-dashboard');
+            // signInWithPopup called directly here — no async ops before it,
+            // so browser treats it as a direct user gesture
+            const result = await signInWithPopup(auth, googleProvider);
+            const fbToken = await result.user.getIdToken();
+            localStorage.setItem('erp_token', fbToken);
+            const userData = {
+                id:    result.user.uid,
+                name:  result.user.displayName,
+                email: result.user.email,
+                role:  'Student',
+                photo: result.user.photoURL,
+            };
+            localStorage.setItem('erp_user', JSON.stringify(userData));
+            window.location.href = '/student-dashboard';
         } catch (err) {
-            setError(err.message || 'Google sign-in failed. Please try again.');
+            if (err.code === 'auth/popup-blocked') {
+                setError('Popup was blocked by your browser. Please allow popups for this site and try again.');
+            } else if (err.code !== 'auth/popup-closed-by-user') {
+                setError(err.message || 'Google sign-in failed. Please try again.');
+            }
         } finally {
             setGoogleLoading(false);
         }
@@ -68,9 +86,7 @@ export default function StudentLogin() {
                     <div className="lp-features">
                         {FEATURES.map(({ icon: Icon, title, desc }) => (
                             <div className="lp-feature" key={title}>
-                                <div className="lp-feat-icon">
-                                    <Icon size={15} />
-                                </div>
+                                <div className="lp-feat-icon"><Icon size={15} /></div>
                                 <div>
                                     <div className="lp-feat-title">{title}</div>
                                     <div className="lp-feat-desc">{desc}</div>
@@ -119,11 +135,7 @@ export default function StudentLogin() {
                                     value={form.password}
                                     onChange={set('password')}
                                 />
-                                <button
-                                    type="button"
-                                    className="pw-toggle"
-                                    onClick={() => setShowPass(s => !s)}
-                                >
+                                <button type="button" className="pw-toggle" onClick={() => setShowPass(s => !s)}>
                                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                             </div>
@@ -136,7 +148,7 @@ export default function StudentLogin() {
                             <Link to="/student-forgot-password" className="lf-forgot">Forgot password?</Link>
                         </div>
 
-                        <button type="submit" className="btn btn-primary btn-lg lf-submit" disabled={loading || googleLoading}>
+                        <button type="submit" className="btn btn-primary btn-lg lf-submit" disabled={loading}>
                             {loading
                                 ? <><span className="spinner" /> Signing in…</>
                                 : <><span>Continue</span> <ArrowRight size={16} /></>
@@ -144,9 +156,7 @@ export default function StudentLogin() {
                         </button>
                     </form>
 
-                    <div className="lf-divider">
-                        <span>or</span>
-                    </div>
+                    <div className="lf-divider"><span>or</span></div>
 
                     <button
                         type="button"
@@ -195,23 +205,22 @@ export default function StudentLogin() {
         .login-panel::after { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%); bottom: -60px; left: -60px; pointer-events: none; }
         .login-panel-inner { max-width: 440px; width: 100%; position: relative; z-index: 1; }
         .lp-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 42px; }
-        .lp-logo { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: white; color: var(--primary); }
         .lp-brand-name { font-size: 1.1rem; font-weight: 700; color: #ffffff; }
-        .lp-brand-tag { font-size: 0.95rem; color: rgba(248, 250, 252, 0.8); }
+        .lp-brand-tag { font-size: 0.95rem; color: rgba(248,250,252,0.8); }
         .lp-hero h1 { font-size: clamp(2rem, 3vw, 3rem); line-height: 1.05; margin-bottom: 18px; color: #ffffff; }
         .lp-accent { color: #93c5fd; }
-        .lp-hero p { max-width: 380px; font-size: 0.98rem; color: rgba(248, 250, 252, 0.75); line-height: 1.7; }
+        .lp-hero p { max-width: 380px; font-size: 0.98rem; color: rgba(248,250,252,0.75); line-height: 1.7; }
         .lp-features { margin-top: 40px; display: grid; gap: 16px; }
         .lp-feature { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: flex-start; }
         .lp-feat-icon { width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,0.18); display: grid; place-items: center; color: var(--primary); }
         .lp-feat-title { font-weight: 700; color: #ffffff; margin-bottom: 4px; }
-        .lp-feat-desc { font-size: 0.92rem; color: rgba(248, 250, 252, 0.75); line-height: 1.5; }
+        .lp-feat-desc { font-size: 0.92rem; color: rgba(248,250,252,0.75); line-height: 1.5; }
         .lp-footer { margin-top: 32px; color: var(--text-muted); font-size: 0.88rem; }
         .login-form-side { width: 500px; display: flex; justify-content: center; align-items: center; padding: 32px; }
         .login-form-wrap { width: 100%; max-width: 380px; }
         .lf-header h2 { font-size: 2rem; margin-bottom: 6px; }
         .lf-header p { color: var(--text-muted); margin-bottom: 24px; }
-        .lf-error { border-radius: 14px; background: rgba(248, 113, 113, 0.12); padding: 12px 16px; margin-bottom: 18px; color: #b91c1c; display: flex; gap: 8px; align-items: center; }
+        .lf-error { border-radius: 14px; background: rgba(248,113,113,0.12); padding: 12px 16px; margin-bottom: 18px; color: #b91c1c; display: flex; gap: 8px; align-items: center; }
         .lf-form .field { margin-bottom: 18px; }
         .lf-form label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
         .lf-form input { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 14px 16px; font-size: 0.95rem; outline: none; }
@@ -227,7 +236,7 @@ export default function StudentLogin() {
         .btn-google:hover:not(:disabled) { border-color: #d1d5db; background: #f9fafb; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
         .spinner-dark { border-color: #d1d5db; border-top-color: #374151; }
-        .lf-demo { margin-top: 28px; padding: 18px 20px; border-radius: 18px; background: rgba(98, 123, 255, 0.06); }
+        .lf-demo { margin-top: 28px; padding: 18px 20px; border-radius: 18px; background: rgba(98,123,255,0.06); }
         .lf-demo-label { margin-bottom: 10px; font-weight: 700; color: var(--text-primary); }
         .lf-demo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.95rem; color: var(--text-muted); }
         .login-switch { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }

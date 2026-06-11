@@ -2,9 +2,9 @@ import {
     signInWithEmailAndPassword,
     signInWithRedirect,
     getRedirectResult,
+    browserPopupRedirectResolver,
     signOut,
     sendPasswordResetEmail,
-    fetchSignInMethodsForEmail,
     updatePassword,
     reauthenticateWithCredential,
     EmailAuthProvider,
@@ -12,14 +12,13 @@ import {
 import { auth, googleProvider } from '../config/firebase.js';
 import { api } from './api.js';
 
+const BASE = () => import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const authService = {
 
     login: async (email, password) => {
-        const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-        // Try backend (MongoDB) first
         try {
-            const res = await fetch(`${BASE}/auth/login`, {
+            const res = await fetch(`${BASE()}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -30,10 +29,8 @@ export const authService = {
                 localStorage.setItem('erp_auth_source', 'backend');
                 return data.data;
             }
-            // Backend responded with auth error — throw immediately, don't try Firebase
             throw new Error(data.message || 'Invalid email or password');
         } catch (err) {
-            // Only fall through to Firebase on network errors (TypeError = fetch failed)
             if (!(err instanceof TypeError)) throw err;
         }
 
@@ -51,13 +48,37 @@ export const authService = {
         };
     },
 
-    // Triggers Google redirect — page navigates away; result handled by getGoogleRedirectResult
-    loginWithGoogle: () => signInWithRedirect(auth, googleProvider),
+    // Triggers Google sign-in via redirect — browser navigates away immediately.
+    // Pass browserPopupRedirectResolver explicitly so Vite never tree-shakes it.
+    loginWithGoogle: () =>
+        signInWithRedirect(auth, googleProvider, browserPopupRedirectResolver),
 
-    // Called on login page mount to pick up the redirect result after returning from Google
+    // Called on app mount to pick up the result AFTER Google redirects back.
+    // Returns a user object if a redirect just completed, null otherwise.
     getGoogleRedirectResult: async () => {
-        const result = await getRedirectResult(auth);
+        const result = await getRedirectResult(auth, browserPopupRedirectResolver);
         if (!result) return null;
+
+        // Exchange the Firebase credential for a backend JWT
+        try {
+            const res = await fetch(`${BASE()}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uid:   result.user.uid,
+                    name:  result.user.displayName,
+                    email: result.user.email,
+                    photo: result.user.photoURL,
+                }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('erp_token', data.token);
+                localStorage.setItem('erp_auth_source', 'backend');
+                return data.data;
+            }
+        } catch { /* backend offline — use Firebase token */ }
+
         const fbToken = await result.user.getIdToken();
         localStorage.setItem('erp_token', fbToken);
         localStorage.setItem('erp_auth_source', 'firebase');
@@ -71,8 +92,7 @@ export const authService = {
     },
 
     loginStudent: async (email, password) => {
-        const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const res  = await fetch(`${BASE}/auth/login/student`, {
+        const res = await fetch(`${BASE()}/auth/login/student`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
@@ -91,19 +111,10 @@ export const authService = {
         localStorage.removeItem('erp_auth_source');
     },
 
+    // fetchSignInMethodsForEmail is deprecated in Firebase v10+ and removed in v12.
+    // Call sendPasswordResetEmail directly; Firebase throws auth/user-not-found if unknown.
     sendPasswordResetEmail: async (email) => {
         if (!email) throw new Error('Email is required');
-        const methods = await fetchSignInMethodsForEmail(auth, email);
-        if (methods.length === 0) {
-            const e = new Error('No account found with this email address.');
-            e.code = 'auth/user-not-found';
-            throw e;
-        }
-        if (methods.includes('google.com') && !methods.includes('password')) {
-            const e = new Error('GOOGLE_ACCOUNT');
-            e.code = 'auth/google-account';
-            throw e;
-        }
         await sendPasswordResetEmail(auth, email);
         return { success: true };
     },

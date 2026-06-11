@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, BookOpen, Shield, Users, BarChart2 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import Logo from '../../components/common/Logo.jsx';
@@ -12,13 +12,18 @@ const FEATURES = [
 ];
 
 export default function Login() {
-    const { login, loginWithGoogle } = useContext(AuthContext);
+    const { login, loginWithGoogle, isAuthenticated } = useContext(AuthContext);
     const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Already logged in — go straight to dashboard
+    if (isAuthenticated || !!localStorage.getItem('erp_user')) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -36,18 +41,31 @@ export default function Login() {
         }
     };
 
-    const handleGoogle = () => {
+    const handleGoogle = async () => {
         setError('');
-        loginWithGoogle(); // triggers signInWithRedirect — navigates away to Google
+        setGoogleLoading(true);
+        try {
+            // loginWithGoogle calls signInWithRedirect — browser navigates away to Google.
+            // If it throws (e.g. auth/operation-not-allowed), the catch shows the error.
+            await loginWithGoogle();
+            // If we reach here the redirect is initiating — keep loading spinner visible
+        } catch (err) {
+            setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
+            setGoogleLoading(false);
+        }
     };
 
     const firebaseError = (code) => ({
-        'auth/user-not-found':       'No account found with this email.',
-        'auth/wrong-password':       'Incorrect password.',
-        'auth/invalid-credential':   'Invalid email or password.',
-        'auth/too-many-requests':    'Too many attempts. Try again later.',
-        'auth/network-request-failed': 'Network error. Check your connection.',
-        'auth/popup-closed-by-user': 'Sign-in popup was closed.',
+        'auth/user-not-found':          'No account found with this email.',
+        'auth/wrong-password':          'Incorrect password.',
+        'auth/invalid-credential':      'Invalid email or password.',
+        'auth/too-many-requests':       'Too many attempts. Try again later.',
+        'auth/network-request-failed':  'Network error. Check your connection.',
+        'auth/operation-not-allowed':   'Google sign-in is not enabled in this project. Enable it in Firebase Console → Authentication → Sign-in method.',
+        'auth/unauthorized-domain':     'This domain is not authorised for Google sign-in. Add it in Firebase Console → Authentication → Settings → Authorized domains.',
+        'auth/internal-error':          'An internal error occurred. Please try again.',
+        'auth/popup-closed-by-user':    'Sign-in was cancelled.',
+        'auth/cancelled-popup-request': 'Sign-in was cancelled. Please try again.',
     }[code]);
 
     return (
