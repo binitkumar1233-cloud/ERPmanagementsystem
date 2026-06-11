@@ -30,17 +30,15 @@ connectDB();
 const app = express();
 
 /* ── Core Middleware ── */
-const ALLOWED_ORIGINS = (process.env.CLIENT_URL || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
-    .concat(['http://localhost:5173', 'http://localhost:5174']);
-
 app.use(cors({
     origin: (origin, cb) => {
-        // allow requests with no origin (mobile apps, curl, Postman)
+        // Allow requests with no origin (curl, Postman, mobile apps)
         if (!origin) return cb(null, true);
-        if (ALLOWED_ORIGINS.some(o => origin.startsWith(o))) return cb(null, true);
+        // Allow any localhost port for local development
+        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true);
+        // Allow configured production CLIENT_URL(s)
+        const allowed = (process.env.CLIENT_URL || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (allowed.some(o => origin.startsWith(o))) return cb(null, true);
         cb(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
