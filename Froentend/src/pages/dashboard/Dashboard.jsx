@@ -190,7 +190,7 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const [campus, setCampus]     = useState('all');
     const [reportTab, setReportTab] = useState('subject');
-    const [recentStudents, setRecentStudents] = useState([]);
+    const [recentStudents, setRecentStudents] = useState(STUDENTS);
     const [statsUpdated, setStatsUpdated] = useState(false);
 
     // Real counts from API
@@ -484,7 +484,7 @@ export default function Dashboard() {
             <div style={S.bottomGrid}>
 
                 {/* Recent Students Table */}
-                <div className="card" style={{ flex: '1 1 0', minWidth: 0 }}>
+                <div className="card" style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <div className="card-header">
                         <div>
                             <h2>Recent Admissions</h2>
@@ -494,7 +494,7 @@ export default function Dashboard() {
                             View All <ChevronRight size={13} />
                         </button>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
+                    <div style={{ flex: 1, overflowX: 'auto' }}>
                         <table>
                             <thead>
                                 <tr>
@@ -711,7 +711,7 @@ const S = {
     reportChip: { display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 8, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' },
 
     /* Bottom */
-    bottomGrid: { display: 'flex', gap: 16, alignItems: 'flex-start' },
+    bottomGrid: { display: 'flex', gap: 16, alignItems: 'stretch' },
     rightCol: { flex: '0 0 310px', display: 'flex', flexDirection: 'column', gap: 16 },
 
     /* Table extras */
