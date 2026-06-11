@@ -691,7 +691,8 @@ export default function Navbar({ title = 'Dashboard', subtitle = '' }) {
                 .nb-dd-logout:hover { background:rgba(239,68,68,0.06); }
 
                 /* Responsive */
-                @media (max-width:1100px) { .nb-clock, .nb-pill { display:none; } }
+                @media (max-width:1380px) { .nb-clock, .nb-pill { display:none; } }
+                @media (max-width:1100px) { .nb-search { width:clamp(100px,14vw,180px); } }
                 @media (max-width:900px)  { .nb-search { width:130px; } .nb-kbd { display:none; } }
                 @media (max-width:1024px) {
                     .navbar { left:0 !important; padding:0 14px; }
