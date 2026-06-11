@@ -285,12 +285,57 @@ export default function AdminPanel() {
 
     return (
         <div className="erp-page" style={{ background:'#f1f5f9', minHeight:'100vh' }}>
+            <style>{`
+                .ap-layout { display:flex; gap:22px; align-items:flex-start; }
+                .ap-sidebar { display:flex !important; flex-direction:column; }
+                .ap-mobile-tabs { display:none; }
+                @media (max-width: 767px) {
+                    .ap-layout { flex-direction:column; gap:12px; }
+                    .ap-sidebar { display:none !important; }
+                    .ap-mobile-tabs {
+                        display:flex; overflow-x:auto; gap:6px;
+                        padding:4px 2px 10px; scrollbar-width:none;
+                        -ms-overflow-style:none; flex-shrink:0; width:100%;
+                    }
+                    .ap-mobile-tabs::-webkit-scrollbar { display:none; }
+                    .ap-mobile-tab {
+                        display:flex; align-items:center; gap:5px;
+                        padding:7px 13px; border-radius:10px;
+                        border:1.5px solid var(--border); font-size:0.75rem;
+                        font-weight:600; cursor:pointer; white-space:nowrap;
+                        flex-shrink:0; transition:all 0.15s;
+                        background:#fff; color:#64748b;
+                        font-family:var(--font-body);
+                    }
+                    /* Section header: stack on mobile */
+                    .ap-sec-hdr { flex-direction:column !important; align-items:flex-start !important; gap:10px !important; }
+                    .ap-sec-hdr-right { flex-wrap:wrap; width:100%; }
+                    /* Modal form: single column on mobile */
+                    .ap-modal-form { grid-template-columns:1fr !important; }
+                }
+            `}</style>
+
             <Navbar title="Admin Control Panel" subtitle="Full system data management — create, edit, delete, audit" />
 
-            <div style={{ display:'flex', gap:22, alignItems:'flex-start' }}>
+            {/* ── Mobile tab bar (hidden on desktop) ── */}
+            <div className="ap-mobile-tabs">
+                {SECTIONS.map(s => {
+                    const active = section === s.key;
+                    return (
+                        <button key={s.key} className="ap-mobile-tab"
+                            onClick={() => { setSection(s.key); setQ(''); }}
+                            style={{ background:active?`${s.color}15`:'#fff', color:active?s.color:'#64748b', borderColor:active?`${s.color}50`:'var(--border)' }}>
+                            <s.icon size={12}/>
+                            {s.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="ap-layout">
 
                 {/* ── Sidebar ── */}
-                <aside style={{ width:220, flexShrink:0, background:'#0f172a', borderRadius:18, padding:'8px 8px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.18)', position:'sticky', top:20, overflow:'hidden' }}>
+                <aside className="ap-sidebar" style={{ width:220, flexShrink:0, background:'#0f172a', borderRadius:18, padding:'8px 8px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.18)', position:'sticky', top:20, overflow:'hidden' }}>
                     <div style={{ padding:'14px 12px 10px', marginBottom:4 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
                             <div style={{ width:32, height:32, borderRadius:9, background:'linear-gradient(135deg,#1e40af,#7c3aed)', display:'grid', placeItems:'center' }}><Shield size={16} color="white"/></div>
@@ -518,7 +563,7 @@ export default function AdminPanel() {
 
                     {/* ══ SYSTEM ══ */}
                     {section==='system' && (
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:16 }}>
                             {[
                                 { title:'Database Backup', icon:Database, color:'#1e40af', desc:'Automated daily backups', items:[{ label:'Last Backup', value:'2026-06-06 02:00 AM' },{ label:'Backup Size', value:'142 MB' },{ label:'Auto Backup', value:'Enabled (Daily)' }], actions:[{ label:'Backup Now', icon:Save, fn:()=>alert('Backup triggered!') },{ label:'Restore', icon:RefreshCw, fn:()=>alert('Select a backup file to restore.') }] },
                                 { title:'Data Export', icon:Download, color:'#059669', desc:'Export records to CSV/Excel', items:[{ label:'Students CSV', value:'Click Export' },{ label:'Teachers CSV', value:'Click Export' },{ label:'Courses CSV', value:'Click Export' }], actions:[{ label:'Export All', icon:Download, fn:()=>alert('Exporting all data...') }] },
@@ -572,7 +617,7 @@ export default function AdminPanel() {
 
             {modal && modal.mode!=='view' && (
                 <Modal title={`${modal.mode==='add'?'Add':'Edit'} ${modal.type.charAt(0).toUpperCase()+modal.type.slice(1)}`} onClose={closeModal} onSave={save} saveLabel={modal.mode==='add'?'Save':'Save Changes'}>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                    <div className="ap-modal-form" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                         {modal.type==='admin' && <>
                             <SF label="Full Name *" error={ferr.name}><input style={inp} value={f.name||''} onChange={fld('name')} placeholder="e.g. Priya Sharma"/></SF>
                             <SF label="Email *" error={ferr.email}><input style={inp} type="email" value={f.email||''} onChange={fld('email')} placeholder="user@edumanage.in"/></SF>
@@ -656,7 +701,7 @@ function OverviewSection({ admins, students, teachers, courses, logs, setSection
     ];
     return (
         <>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:20 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:16, marginBottom:20 }}>
                 {stats.map(s=>(
                     <div key={s.label} onClick={()=>setSection(s.key)}
                         style={{ background:'var(--bg-card,white)', border:'1px solid var(--border)', borderRadius:16, padding:'20px 20px 16px', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', cursor:'pointer', transition:'all 0.2s', overflow:'hidden', position:'relative' }}>
@@ -674,7 +719,7 @@ function OverviewSection({ admins, students, teachers, courses, logs, setSection
                 ))}
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1.3fr', gap:16, marginBottom:20 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:16, marginBottom:20 }}>
                 <div style={{ background:'var(--bg-card,white)', border:'1px solid var(--border)', borderRadius:16, padding:'20px 22px', boxShadow:'0 2px 12px rgba(0,0,0,0.06)' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
@@ -730,7 +775,7 @@ function OverviewSection({ admins, students, teachers, courses, logs, setSection
                     <h3 style={{ margin:'0 0 3px', fontSize:'0.9rem', fontWeight:800, color:'var(--text-primary)' }}>Quick Actions</h3>
                     <p style={{ margin:0, fontSize:'0.74rem', color:'var(--text-muted)' }}>Common administrative tasks</p>
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10 }}>
                     {quickActions.map(a=>(
                         <button key={a.label} onClick={a.action}
                             style={{ display:'flex', alignItems:'center', gap:10, padding:'13px 16px', borderRadius:12, border:`1.5px solid ${a.color}20`, background:`${a.color}08`, color:'var(--text-primary)', cursor:'pointer', transition:'all 0.15s', textAlign:'left' }}>
@@ -762,7 +807,7 @@ function SectionTable({ title, icon, color, q, setQ, onAdd, addLabel, rows, head
                 <div style={{ display:'flex', gap:9, alignItems:'center' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:7, border:'1.5px solid var(--border)', borderRadius:10, padding:'7px 14px', background:'var(--bg,#f8fafc)' }}>
                         <Search size={13} color="#94a3b8"/>
-                        <input value={q} onChange={e=>setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}…`} style={{ border:'none', outline:'none', fontSize:'0.83rem', background:'transparent', color:'var(--text-primary)', width:155 }}/>
+                        <input value={q} onChange={e=>setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}…`} style={{ border:'none', outline:'none', fontSize:'0.83rem', background:'transparent', color:'var(--text-primary)', width:'clamp(80px,20vw,155px)' }}/>
                     </div>
                     <button onClick={onAdd} style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 16px', borderRadius:10, border:'none', background:`linear-gradient(135deg,${color},${color}dd)`, color:'white', fontSize:'0.82rem', fontWeight:700, cursor:'pointer', boxShadow:`0 2px 10px ${color}50` }}>
                         <Plus size={14}/>{addLabel}
