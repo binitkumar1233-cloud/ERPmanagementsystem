@@ -29,19 +29,45 @@ export function AuthProvider({ children }) {
                 setAuthLoading(false);
 
             } else if (firebaseUser && !authSource) {
-                // No auth source set but Firebase has a user — this is the Google
-                // redirect result landing. Set up the session and go to dashboard.
+                // No auth source set but Firebase has a user — Google redirect just landed.
+                // Exchange the Firebase token for a backend JWT so API calls work.
                 try {
-                    const token = await firebaseUser.getIdToken();
-                    const userData = {
-                        id:    firebaseUser.uid,
-                        name:  firebaseUser.displayName,
-                        email: firebaseUser.email,
-                        role:  'Administrator',
-                        photo: firebaseUser.photoURL,
-                    };
+                    const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                    let userData, token;
+
+                    try {
+                        const res = await fetch(`${BASE}/auth/google`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                uid:   firebaseUser.uid,
+                                name:  firebaseUser.displayName,
+                                email: firebaseUser.email,
+                                photo: firebaseUser.photoURL,
+                            }),
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            token    = data.token;
+                            userData = data.data;
+                            localStorage.setItem('erp_auth_source', 'backend');
+                        }
+                    } catch { /* backend offline — fall through */ }
+
+                    // Fallback to Firebase token if backend exchange failed
+                    if (!token) {
+                        token = await firebaseUser.getIdToken();
+                        userData = {
+                            id:    firebaseUser.uid,
+                            name:  firebaseUser.displayName,
+                            email: firebaseUser.email,
+                            role:  'Administrator',
+                            photo: firebaseUser.photoURL,
+                        };
+                        localStorage.setItem('erp_auth_source', 'firebase');
+                    }
+
                     localStorage.setItem('erp_token', token);
-                    localStorage.setItem('erp_auth_source', 'firebase');
                     localStorage.setItem('erp_user', JSON.stringify(userData));
                     setUser(userData);
                     setAuthLoading(false);
