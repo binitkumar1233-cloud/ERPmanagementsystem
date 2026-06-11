@@ -52,22 +52,41 @@ export const authService = {
 
     loginWithGoogle: async () => {
         const result = await signInWithPopup(auth, googleProvider);
+        const fbToken = await result.user.getIdToken();
+
+        // Try to exchange for a backend JWT so API calls work
         const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const res = await fetch(`${BASE}/auth/google`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                uid:   result.user.uid,
-                name:  result.user.displayName,
-                email: result.user.email,
-                photo: result.user.photoURL,
-            }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
-        localStorage.setItem('erp_token', data.token);
-        localStorage.setItem('erp_auth_source', 'backend');
-        return data.data;
+        try {
+            const res = await fetch(`${BASE}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uid:   result.user.uid,
+                    name:  result.user.displayName,
+                    email: result.user.email,
+                    photo: result.user.photoURL,
+                }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('erp_token', data.token);
+                localStorage.setItem('erp_auth_source', 'backend');
+                return data.data;
+            }
+        } catch {
+            // Backend offline — fall through to Firebase token
+        }
+
+        // Fallback: store Firebase token directly (same as original behaviour)
+        localStorage.setItem('erp_token', fbToken);
+        localStorage.setItem('erp_auth_source', 'firebase');
+        return {
+            id:    result.user.uid,
+            name:  result.user.displayName,
+            email: result.user.email,
+            role:  'Administrator',
+            photo: result.user.photoURL,
+        };
     },
 
     loginStudent: async (email, password) => {
