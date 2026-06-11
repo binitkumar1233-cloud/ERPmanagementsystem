@@ -190,23 +190,29 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const [campus, setCampus]     = useState('all');
     const [reportTab, setReportTab] = useState('subject');
-    const [recentStudents, setRecentStudents] = useState(STUDENTS.map(normaliseStudent));
+    const [recentStudents, setRecentStudents] = useState([]);
     const [statsUpdated, setStatsUpdated] = useState(false);
+
+    // Real counts from API
+    const [apiStudents,  setApiStudents]  = useState(null);
+    const [apiTeachers,  setApiTeachers]  = useState(null);
+    const [apiCourses,   setApiCourses]   = useState(null);
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     const firstName = user?.name?.split(' ')[0] || 'Admin';
-    const cs = CAMPUS_STATS[campus];
 
     /* ── Live socket data ── */
     const { connected, stats: liveStats, liveActivity } = useSocket();
 
-    /* Overlay live values from socket when connected */
-    const liveStudents  = connected && liveStats ? liveStats.totalStudents  : null;
-    const liveFaculty   = connected && liveStats ? liveStats.totalTeachers  : null;
-    const liveAttPct    = connected && liveStats ? liveStats.attendancePct  : null;
-    const liveFeePend   = connected && liveStats ? liveStats.totalFeePending : null;
-    const livePendCount = connected && liveStats ? Math.max(1, Math.round(liveStats.totalFeePending / 5000)) : null;
+    /* Prefer: socket live → API fetch → mock fallback */
+    const liveStudents  = connected && liveStats ? liveStats.totalStudents   : null;
+    const liveFaculty   = connected && liveStats ? liveStats.totalTeachers   : null;
+    const liveFeePend   = connected && liveStats ? liveStats.totalFeePending  : null;
+
+    const totalStudents = liveStudents ?? apiStudents ?? CAMPUS_STATS.all.students;
+    const totalFaculty  = liveFaculty  ?? apiTeachers ?? CAMPUS_STATS.all.faculty;
+    const totalCourses  = apiCourses   ?? CAMPUS_STATS.all.courses;
 
     /* Flash animation when stats update */
     useEffect(() => {
@@ -216,8 +222,17 @@ export default function Dashboard() {
         return () => clearTimeout(t);
     }, [liveStats]);
 
-    /* Fetch real students on mount */
+    /* Fetch real counts and recent students from API on mount */
     useEffect(() => {
+        api.get('/students/stats')
+            .then(res => { if (res.data) { setApiStudents(res.data.total); } })
+            .catch(() => {});
+        api.get('/courses/stats')
+            .then(res => { if (res.data) setApiCourses(res.data.total); })
+            .catch(() => {});
+        api.get('/teachers/stats')
+            .then(res => { if (res.data) setApiTeachers(res.data.total); })
+            .catch(() => {});
         api.get('/students?limit=6')
             .then(res => { if (res.data?.length) setRecentStudents(res.data.map(normaliseStudent)); })
             .catch(() => {});
@@ -247,10 +262,10 @@ export default function Dashboard() {
     ].slice(0, 7);
 
     const heroCards = [
-        { label: 'Total Students',  value: liveStudents ?? cs.students, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(145deg,#1e1b4b 0%,#3730a3 40%,#4f46e5 75%,#818cf8 100%)', glow: 'rgba(79,70,229,0.42)', sub: connected ? '● Live · all campuses' : 'Across selected campus', live: liveStudents !== null },
-        { label: 'Faculty Members', value: liveFaculty  ?? cs.faculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(145deg,#022c22 0%,#065f46 40%,#059669 75%,#34d399 100%)', glow: 'rgba(16,185,129,0.42)', sub: connected ? '● Live · all departments' : 'All departments', live: liveFaculty !== null },
-        { label: 'Active Courses',  value: cs.courses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(145deg,#2e1065 0%,#5b21b6 40%,#7c3aed 75%,#a78bfa 100%)', glow: 'rgba(139,92,246,0.42)', sub: 'Current semester', live: false },
-        { label: 'Pass Rate',       value: cs.passRate, change: '+5%',  up: true,  icon: TrendingUp,    gradient: 'linear-gradient(145deg,#451a03 0%,#92400e 40%,#d97706 75%,#fbbf24 100%)', glow: 'rgba(245,158,11,0.42)', sub: 'Above national avg', live: false },
+        { label: 'Total Students',  value: totalStudents, change: '+12%', up: true,  icon: GraduationCap, gradient: 'linear-gradient(145deg,#1e1b4b 0%,#3730a3 40%,#4f46e5 75%,#818cf8 100%)', glow: 'rgba(79,70,229,0.42)', sub: connected ? '● Live · all campuses' : 'Across all campuses', live: liveStudents !== null },
+        { label: 'Faculty Members', value: totalFaculty,  change: '+3%',  up: true,  icon: Users,         gradient: 'linear-gradient(145deg,#022c22 0%,#065f46 40%,#059669 75%,#34d399 100%)', glow: 'rgba(16,185,129,0.42)', sub: connected ? '● Live · all departments' : 'All departments', live: liveFaculty !== null },
+        { label: 'Active Courses',  value: totalCourses,  change: '0%',   up: null,  icon: BookOpen,      gradient: 'linear-gradient(145deg,#2e1065 0%,#5b21b6 40%,#7c3aed 75%,#a78bfa 100%)', glow: 'rgba(139,92,246,0.42)', sub: 'Current semester', live: false },
+        { label: 'Pass Rate',       value: CAMPUS_STATS.all.passRate, change: '+5%', up: true, icon: TrendingUp, gradient: 'linear-gradient(145deg,#451a03 0%,#92400e 40%,#d97706 75%,#fbbf24 100%)', glow: 'rgba(245,158,11,0.42)', sub: 'Above national avg', live: false },
     ];
 
     return (

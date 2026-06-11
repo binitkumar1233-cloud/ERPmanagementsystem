@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../../services/api.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -26,24 +27,22 @@ const STUDENT_COLUMNS = [
     { label: 'Campus',      key: 'campus' },
 ];
 
-const DATA = [
-    { id: 'STU001', name: 'Priya Sharma',  dob: '2003-04-12', course: 'B.Sc Computer Science', dept: 'Sciences',   year: 2, phone: '9876543210', email: 'priya@mail.com',  roll: 'CS102', status: 'Active',   fees: 'Paid',    avg: 87, campus: 'Main'  },
-    { id: 'STU002', name: 'Rohan Das',     dob: '2002-11-20', course: 'B.Com Honours',          dept: 'Commerce',  year: 3, phone: '9123456780', email: 'rohan@mail.com',  roll: 'BC304', status: 'Active',   fees: 'Pending', avg: 74, campus: 'North' },
-    { id: 'STU003', name: 'Ananya Patel',  dob: '2004-01-05', course: 'B.A English',            dept: 'Arts',      year: 1, phone: '9988776655', email: 'ananya@mail.com', roll: 'AE101', status: 'Active',   fees: 'Paid',    avg: 91, campus: 'South' },
-    { id: 'STU004', name: 'Suresh Kumar',  dob: '2001-07-30', course: 'B.Tech ECE',             dept: 'Engineering',year:4, phone: '9001122334', email: 'suresh@mail.com', roll: 'EC417', status: 'Inactive', fees: 'Overdue', avg: 61, campus: 'Main'  },
-    { id: 'STU005', name: 'Meena Nayak',   dob: '2002-03-18', course: 'M.Sc Mathematics',       dept: 'Sciences',  year: 2, phone: '9765432100', email: 'meena@mail.com',  roll: 'MM205', status: 'Active',   fees: 'Paid',    avg: 93, campus: 'Main'  },
-    { id: 'STU006', name: 'Amit Verma',    dob: '2003-09-25', course: 'B.Tech CSE',             dept: 'Engineering',year:2, phone: '9654321098', email: 'amit@mail.com',   roll: 'CS206', status: 'Active',   fees: 'Paid',    avg: 79, campus: 'North' },
-    { id: 'STU007', name: 'Sita Rao',      dob: '2004-06-14', course: 'B.A History',            dept: 'Arts',      year: 1, phone: '9543210987', email: 'sita@mail.com',   roll: 'HS113', status: 'Active',   fees: 'Pending', avg: 68, campus: 'South' },
-    { id: 'STU008', name: 'Arjun Mehta',   dob: '2003-12-01', course: 'B.Tech CSE',             dept: 'Engineering',year:1, phone: '9432109876', email: 'arjun@mail.com',  roll: 'CS101', status: 'Active',   fees: 'Paid',    avg: 85, campus: 'Main'  },
-    { id: 'STU009', name: 'Nisha Singh',   dob: '2003-05-22', course: 'B.Sc Physics',           dept: 'Sciences',  year: 2, phone: '9876501234', email: 'nisha@mail.com',  roll: 'PH212', status: 'Active',   fees: 'Paid',    avg: 89, campus: 'Main'  },
-    { id: 'STU010', name: 'Harsh Patel',   dob: '2002-08-11', course: 'BBA',                    dept: 'Commerce',  year: 3, phone: '9123405678', email: 'harsh@mail.com',  roll: 'BB305', status: 'Active',   fees: 'Pending', avg: 77, campus: 'North' },
-    { id: 'STU011', name: 'Riya Agarwal',  dob: '2004-02-09', course: 'B.A History',            dept: 'Arts',      year: 1, phone: '9987004567', email: 'riya@mail.com',   roll: 'HS105', status: 'Active',   fees: 'Paid',    avg: 92, campus: 'South' },
-    { id: 'STU012', name: 'Vikram Joshi',  dob: '2002-12-30', course: 'B.Tech ECE',             dept: 'Engineering',year:4, phone: '9001103344', email: 'vikram@mail.com', roll: 'EC430', status: 'Inactive', fees: 'Overdue', avg: 64, campus: 'Main'  },
-    { id: 'STU013', name: 'Pooja Reddy',   dob: '2003-07-18', course: 'B.Sc Chemistry',         dept: 'Sciences',  year: 2, phone: '9765412309', email: 'pooja@mail.com',  roll: 'CH220', status: 'Active',   fees: 'Paid',    avg: 88, campus: 'North' },
-    { id: 'STU014', name: 'Aditya Shah',   dob: '2003-03-02', course: 'B.Com Honours',          dept: 'Commerce',  year: 3, phone: '9654312789', email: 'aditya@mail.com', roll: 'BC308', status: 'Active',   fees: 'Paid',    avg: 81, campus: 'Main'  },
-    { id: 'STU015', name: 'Sneha Iyer',    dob: '2004-09-27', course: 'B.A English',            dept: 'Arts',      year: 1, phone: '9543211023', email: 'sneha@mail.com',  roll: 'AE108', status: 'Active',   fees: 'Paid',    avg: 90, campus: 'South' },
-    { id: 'STU016', name: 'Karan Mehta',   dob: '2002-06-05', course: 'MBA',                    dept: 'Commerce',  year: 1, phone: '9432101007', email: 'karan@mail.com',  roll: 'MB101', status: 'Active',   fees: 'Pending', avg: 75, campus: 'North' },
-];
+const YEAR_MAP = { '1st': 1, '2nd': 2, '3rd': 3, '4th': 4 };
+const normStudent = d => ({
+    id: d.studentId || d._id,
+    name: d.name,
+    dob: d.dob?.slice(0, 10) || '',
+    course: d.course,
+    dept: 'All',
+    year: YEAR_MAP[d.year] || 1,
+    phone: d.phone || '',
+    email: d.email || '',
+    roll: d.rollNumber || d.studentId || '',
+    status: d.status,
+    fees: d.fees,
+    avg: 0,
+    campus: 'Main',
+});
 
 const DEPTS = ['All', 'Engineering', 'Sciences', 'Commerce', 'Arts'];
 const DEPT_COLORS = { Engineering: '#2563eb', Sciences: '#059669', Commerce: '#d97706', Arts: '#7c3aed' };
@@ -70,13 +69,26 @@ export default function Students() {
     const [page, setPage] = useState(1);
     const [sortKey, setSortKey] = useState('name');
     const [sortAsc, setSortAsc] = useState(true);
+    const [data, setData]       = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [apiError, setApiError] = useState('');
+
+    useEffect(() => {
+        api.get('/students')
+            .then(res => setData((res.data || []).map(normStudent)))
+            .catch(err => setApiError(err.message))
+            .finally(() => setLoading(false));
+    }, []);
 
     const toggleSort = key => {
         if (sortKey === key) setSortAsc(a => !a);
         else { setSortKey(key); setSortAsc(true); }
     };
 
-    const filtered = DATA
+    if (loading) return <div className="erp-page"><Navbar title="Students" subtitle="Manage all student records" /><div className="empty-state"><p>Loading students…</p></div></div>;
+    if (apiError) return <div className="erp-page"><Navbar title="Students" subtitle="Manage all student records" /><div className="empty-state"><p style={{color:'#dc2626'}}>⚠ Failed to load: {apiError}</p></div></div>;
+
+    const filtered = data
         .filter(s => {
             const mq   = s.name.toLowerCase().includes(q.toLowerCase()) || s.id.toLowerCase().includes(q.toLowerCase()) || s.course.toLowerCase().includes(q.toLowerCase());
             const ms   = sf === 'All'   || s.status === sf;
@@ -109,10 +121,10 @@ export default function Students() {
             {/* ── Hero KPI Cards ── */}
             <div style={S.heroGrid}>
                 {[
-                    { label: 'Total Students',     value: DATA.length,                                      icon: GraduationCap, gradient: 'linear-gradient(135deg,#1e3a8a,#2563eb)', glow: 'rgba(37,99,235,0.28)',  sub: `${DATA.filter(s=>s.campus==='Main').length} Main · ${DATA.filter(s=>s.campus==='North').length} North · ${DATA.filter(s=>s.campus==='South').length} South` },
-                    { label: 'Active Students',    value: DATA.filter(s=>s.status==='Active').length,        icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.28)', sub: `${Math.round(DATA.filter(s=>s.status==='Active').length/DATA.length*100)}% enrollment rate` },
-                    { label: 'Fee Pending',        value: DATA.filter(s=>s.fees==='Pending').length,         icon: AlertTriangle,  gradient: 'linear-gradient(135deg,#92400e,#d97706)', glow: 'rgba(245,158,11,0.28)', sub: 'Awaiting payment' },
-                    { label: 'Fee Overdue',        value: DATA.filter(s=>s.fees==='Overdue').length,         icon: XCircle,        gradient: 'linear-gradient(135deg,#7f1d1d,#dc2626)', glow: 'rgba(220,38,38,0.28)',  sub: 'Immediate action needed' },
+                    { label: 'Total Students',     value: data.length,                                      icon: GraduationCap, gradient: 'linear-gradient(135deg,#1e3a8a,#2563eb)', glow: 'rgba(37,99,235,0.28)',  sub: `${data.filter(s=>s.campus==='Main').length} Main · ${data.filter(s=>s.campus==='North').length} North · ${data.filter(s=>s.campus==='South').length} South` },
+                    { label: 'Active Students',    value: data.filter(s=>s.status==='Active').length,        icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.28)', sub: `${Math.round(data.filter(s=>s.status==='Active').length/data.length*100)}% enrollment rate` },
+                    { label: 'Fee Pending',        value: data.filter(s=>s.fees==='Pending').length,         icon: AlertTriangle,  gradient: 'linear-gradient(135deg,#92400e,#d97706)', glow: 'rgba(245,158,11,0.28)', sub: 'Awaiting payment' },
+                    { label: 'Fee Overdue',        value: data.filter(s=>s.fees==='Overdue').length,         icon: XCircle,        gradient: 'linear-gradient(135deg,#7f1d1d,#dc2626)', glow: 'rgba(220,38,38,0.28)',  sub: 'Immediate action needed' },
                 ].map(({ label, value, icon: Icon, gradient, glow, sub }) => (
                     <div key={label} style={{ ...S.heroCard, background: gradient, boxShadow: `0 8px 24px ${glow}` }}>
                         <div style={S.heroTop}>
@@ -140,7 +152,7 @@ export default function Students() {
                             onClick={() => { setDept(d); setPage(1); }}
                         >
                             {d !== 'All' && <span style={{ ...S.deptDot, background: color }} />}
-                            {d}{d !== 'All' && ` (${DATA.filter(s => s.dept === d).length})`}
+                            {d}{d !== 'All' && ` (${data.filter(s => s.dept === d).length})`}
                         </button>
                     );
                 })}

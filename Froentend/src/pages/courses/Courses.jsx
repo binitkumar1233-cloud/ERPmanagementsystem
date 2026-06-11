@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../../services/api.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -25,19 +26,28 @@ const COURSE_COLUMNS = [
     { label: 'Rating',      key: 'rating'   },
 ];
 
-const DATA = [
-    { id:'CRS001', name:'B.Sc Computer Science', dept:'Computer Science',  level:'UG', duration:'3 Years', sems:6,  seats:60, enrolled:54, credits:120, fee:45000, status:'Active',   campus:['Main','North'],   coord:'Dr. Kavitha Rao',   rating:4.7 },
-    { id:'CRS002', name:'B.Com Honours',          dept:'Commerce',          level:'UG', duration:'3 Years', sems:6,  seats:80, enrolled:72, credits:100, fee:30000, status:'Active',   campus:['Main','South'],   coord:'Mr. Deepak Sharma', rating:4.4 },
-    { id:'CRS003', name:'B.A English',            dept:'English',           level:'UG', duration:'3 Years', sems:6,  seats:50, enrolled:41, credits:90,  fee:25000, status:'Active',   campus:['South'],          coord:'Mrs. Sunita Devi',  rating:4.5 },
-    { id:'CRS004', name:'B.Tech ECE',             dept:'Electronics',       level:'UG', duration:'4 Years', sems:8,  seats:60, enrolled:58, credits:160, fee:90000, status:'Active',   campus:['Main'],           coord:'Mr. Rajan Pillai',  rating:4.6 },
-    { id:'CRS005', name:'B.Tech CSE',             dept:'Computer Science',  level:'UG', duration:'4 Years', sems:8,  seats:60, enrolled:60, credits:160, fee:90000, status:'Active',   campus:['Main','North'],   coord:'Dr. Kavitha Rao',   rating:4.8 },
-    { id:'CRS006', name:'M.Sc Mathematics',       dept:'Mathematics',       level:'PG', duration:'2 Years', sems:4,  seats:30, enrolled:22, credits:80,  fee:35000, status:'Active',   campus:['Main'],           coord:'Prof. Arun Mishra', rating:4.5 },
-    { id:'CRS007', name:'MBA',                    dept:'Management',        level:'PG', duration:'2 Years', sems:4,  seats:40, enrolled:38, credits:100, fee:80000, status:'Active',   campus:['Main','North'],   coord:'Dr. Neha Joshi',    rating:4.9 },
-    { id:'CRS008', name:'B.A History',            dept:'History',           level:'UG', duration:'3 Years', sems:6,  seats:40, enrolled:28, credits:90,  fee:22000, status:'Inactive', campus:['South'],          coord:'Mrs. Lata Nayak',   rating:4.2 },
-    { id:'CRS009', name:'B.Sc Physics',           dept:'Science',           level:'UG', duration:'3 Years', sems:6,  seats:45, enrolled:39, credits:110, fee:42000, status:'Active',   campus:['Main'],           coord:'Ms. Meera Iyer',    rating:4.6 },
-    { id:'CRS010', name:'BBA',                    dept:'Management',        level:'UG', duration:'3 Years', sems:6,  seats:50, enrolled:44, credits:105, fee:65000, status:'Active',   campus:['North','South'],  coord:'Dr. Neha Joshi',    rating:4.4 },
-    { id:'CRS011', name:'M.A Sociology',          dept:'Social Sciences',   level:'PG', duration:'2 Years', sems:4,  seats:25, enrolled:18, credits:80,  fee:30000, status:'Active',   campus:['South'],          coord:'Mrs. Lata Nayak',   rating:4.3 },
-];
+const SEMS_BY_DURATION = { '2 years': 4, '2 Years': 4, '3 years': 6, '3 Years': 6, '4 years': 8, '4 Years': 8 };
+
+const normCourse = d => {
+    const sems  = SEMS_BY_DURATION[d.duration] || 6;
+    const level = sems <= 4 ? 'PG' : 'UG';
+    return {
+        id:       d.courseId || d._id,
+        name:     d.name,
+        dept:     d.dept,
+        level,
+        duration: d.duration,
+        sems,
+        seats:    d.seats,
+        enrolled: d.enrolled || 0,
+        credits:  0,
+        fee:      d.fees || 0,
+        status:   d.status,
+        campus:   ['Main'],
+        coord:    d.headOfDept?.name || '—',
+        rating:   0,
+    };
+};
 
 const DEPT_COLORS = {
     'Computer Science':'#2563eb', 'Commerce':'#d97706',    'English':'#059669',
@@ -48,7 +58,6 @@ const LEVEL_STYLE = {
     UG: { color:'#2563eb', bg:'rgba(37,99,235,0.09)',  border:'rgba(37,99,235,0.22)'  },
     PG: { color:'#7c3aed', bg:'rgba(124,58,237,0.09)', border:'rgba(124,58,237,0.22)' },
 };
-const DEPTS = ['All', ...new Set(DATA.map(c => c.dept))];
 const SORT_OPTS = [
     { label:'Name',      key:'name'     },
     { label:'Fee',       key:'fee'      },
@@ -74,12 +83,27 @@ export default function Courses() {
     const [view,   setView]   = useState('grid');
     const [sortK,  setSortK]  = useState('name');
     const [sortA,  setSortA]  = useState(true);
+    const [data,   setData]   = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [apiError, setApiError] = useState('');
 
-    const totalSeats    = DATA.reduce((s,c) => s+c.seats,    0);
-    const totalEnrolled = DATA.reduce((s,c) => s+c.enrolled, 0);
-    const avgRating     = (DATA.reduce((s,c)=>s+c.rating,0)/DATA.length).toFixed(1);
+    useEffect(() => {
+        api.get('/courses')
+            .then(res => setData((res.data || []).map(normCourse)))
+            .catch(err => setApiError(err.message))
+            .finally(() => setLoading(false));
+    }, []);
 
-    const withOcc = DATA.map(c => ({ ...c, occ: occOf(c) }));
+    const DEPTS = ['All', ...new Set(data.map(c => c.dept))];
+
+    if (loading) return <div className="erp-page"><Navbar title="Courses" subtitle="Manage academic programs and courses" /><div className="empty-state"><p>Loading courses…</p></div></div>;
+    if (apiError) return <div className="erp-page"><Navbar title="Courses" subtitle="Manage academic programs and courses" /><div className="empty-state"><p style={{color:'#dc2626'}}>⚠ Failed to load: {apiError}</p></div></div>;
+
+    const totalSeats    = data.reduce((s,c) => s+c.seats,    0);
+    const totalEnrolled = data.reduce((s,c) => s+c.enrolled, 0);
+    const avgRating     = data.length ? (data.reduce((s,c)=>s+c.rating,0)/data.length).toFixed(1) : '0.0';
+
+    const withOcc = data.map(c => ({ ...c, occ: occOf(c) }));
 
     const filtered = withOcc
         .filter(c => {
@@ -102,8 +126,8 @@ export default function Courses() {
             {/* ── Hero KPI Cards ── */}
             <div style={S.heroGrid}>
                 {[
-                    { label:'Total Courses',   value:DATA.length,     icon:BookOpen,     gradient:'linear-gradient(135deg,#1e3a8a,#2563eb)', glow:'rgba(37,99,235,0.28)',  sub:`${DATA.filter(c=>c.level==='UG').length} UG · ${DATA.filter(c=>c.level==='PG').length} PG programs` },
-                    { label:'Active Courses',  value:DATA.filter(c=>c.status==='Active').length, icon:Award, gradient:'linear-gradient(135deg,#065f46,#059669)', glow:'rgba(16,185,129,0.28)', sub:'Currently running' },
+                    { label:'Total Courses',   value:data.length,     icon:BookOpen,     gradient:'linear-gradient(135deg,#1e3a8a,#2563eb)', glow:'rgba(37,99,235,0.28)',  sub:`${data.filter(c=>c.level==='UG').length} UG · ${data.filter(c=>c.level==='PG').length} PG programs` },
+                    { label:'Active Courses',  value:data.filter(c=>c.status==='Active').length, icon:Award, gradient:'linear-gradient(135deg,#065f46,#059669)', glow:'rgba(16,185,129,0.28)', sub:'Currently running' },
                     { label:'Total Seats',     value:totalSeats,      icon:Layers,       gradient:'linear-gradient(135deg,#4c1d95,#7c3aed)', glow:'rgba(139,92,246,0.28)', sub:'Across all courses' },
                     { label:'Total Enrolled',  value:totalEnrolled,   icon:Users,        gradient:'linear-gradient(135deg,#92400e,#d97706)', glow:'rgba(245,158,11,0.28)', sub:`${totalSeats-totalEnrolled} seats available` },
                     { label:'Avg Occupancy',   value:Math.round(totalEnrolled/totalSeats*100)+'%', icon:BarChart3, gradient:'linear-gradient(135deg,#0c4a6e,#0284c7)', glow:'rgba(2,132,199,0.28)', sub:`Avg rating ${avgRating} ★` },
@@ -134,7 +158,7 @@ export default function Courses() {
                         >
                             {d!=='All' && <span style={{ ...S.chipDot, background:color }}/>}
                             {d!=='All' ? d.split(' ')[0] : 'All'}
-                            {d!=='All' && ` (${DATA.filter(c=>c.dept===d).length})`}
+                            {d!=='All' && ` (${data.filter(c=>c.dept===d).length})`}
                         </button>
                     );
                 })}

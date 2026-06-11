@@ -17,6 +17,13 @@ async function request(method, path, data) {
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
+        // Session expired or invalid — clear auth and redirect to login
+        if (res.status === 401) {
+            localStorage.removeItem('erp_token');
+            localStorage.removeItem('erp_user');
+            localStorage.removeItem('erp_auth_source');
+            window.location.href = '/login';
+        }
         throw new Error(err.message || 'Something went wrong');
     }
 
