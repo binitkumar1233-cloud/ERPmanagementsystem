@@ -1,0 +1,10 @@
+{
+  "name": "edumanage-erp",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"green,blue\" \"npm run dev --prefix Backend\" \"npm run dev --prefix Froentend\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}

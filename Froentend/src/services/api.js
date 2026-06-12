@@ -49,7 +49,12 @@ async function request(method, path, data) {
 
     if (data) config.body = JSON.stringify(data);
 
-    const res = await fetch(`${BASE_URL}${path}`, config);
+    let res;
+    try {
+        res = await fetch(`${BASE_URL}${path}`, config);
+    } catch {
+        throw new Error('Cannot connect to server. Make sure the backend is running (npm run dev inside /Backend).');
+    }
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
