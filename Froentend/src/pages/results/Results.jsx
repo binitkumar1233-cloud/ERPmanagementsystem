@@ -105,7 +105,7 @@ function Certificate({ student, onClose }) {
         <div style={CS.overlay} onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
             <div style={CS.wrapper}>
                 {/* toolbar */}
-                <div style={CS.toolbar}>
+                <div className="cert-toolbar" style={CS.toolbar}>
                     <span style={{ fontSize:'0.82rem', color:'#94a3b8' }}>Certificate Preview</span>
                     <div style={{ display:'flex', gap:8 }}>
                         <button className="btn btn-primary btn-sm" onClick={printCert} style={{ display:'flex', alignItems:'center', gap:5 }}>
@@ -696,9 +696,19 @@ export default function Results() {
                 @media(max-width:900px){  .res-two-col{ flex-direction:column!important; } }
                 @media(max-width:640px){  .hero-6{ grid-template-columns:repeat(2,1fr)!important; } }
                 @media print {
-                    body > *:not(#certificate-print) { display: none !important; }
-                    #certificate-print { position:fixed; top:0; left:0; width:100%; height:auto; z-index:99999; }
-                    .cert-toolbar { display:none !important; }
+                    body * { visibility: hidden !important; }
+                    #certificate-print, #certificate-print * { visibility: visible !important; }
+                    .cert-toolbar { display: none !important; }
+                    #certificate-print {
+                        position: fixed !important;
+                        top: 0 !important; left: 0 !important;
+                        width: 100vw !important;
+                        background: white !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                        z-index: 99999 !important;
+                    }
+                    @page { margin: 10mm; size: A4 landscape; }
                 }
             `}</style>
         </div>
@@ -735,7 +745,7 @@ const S = {
 const CS = {
     overlay: { position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(15,23,42,0.72)', zIndex:99999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-start', overflowY:'auto', padding:'24px 16px 40px' },
     wrapper: { width:'100%', maxWidth:900, display:'flex', flexDirection:'column', gap:0 },
-    toolbar: { display:'flex', alignItems:'center', justifyContent:'space-between', background:'#1e293b', borderRadius:'12px 12px 0 0', padding:'10px 18px', className:'cert-toolbar' },
+    toolbar: { display:'flex', alignItems:'center', justifyContent:'space-between', background:'#1e293b', borderRadius:'12px 12px 0 0', padding:'10px 18px' },
 
     sheet: { background:'white', borderRadius:'0 0 12px 12px', overflow:'hidden' },
     outerBorder: { margin:20, border:'4px double #1e3a8a', borderRadius:8, padding:4 },
