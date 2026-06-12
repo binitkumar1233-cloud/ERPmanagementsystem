@@ -78,6 +78,7 @@ async function request(method, path, data) {
             localStorage.removeItem('erp_user');
             localStorage.removeItem('erp_auth_source');
             window.location.href = '/login';
+            return new Promise(() => {}); // navigation in progress, never resolve
         }
 
         throw new Error(err.message || 'Something went wrong');

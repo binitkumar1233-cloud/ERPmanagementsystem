@@ -85,23 +85,41 @@ export default function Students() {
         else { setSortKey(key); setSortAsc(true); }
     };
 
+    const isNetworkError = apiError && (apiError.includes('Cannot connect') || apiError.includes('Failed to fetch') || apiError.includes('NetworkError'));
+
     if (loading) return <div className="erp-page"><Navbar title="Students" subtitle="Manage all student records" /><div className="empty-state"><p>Loading students…</p></div></div>;
     if (apiError) return (
         <div className="erp-page">
             <Navbar title="Students" subtitle="Manage all student records" />
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, gap:16, textAlign:'center', padding:32 }}>
-                <div style={{ fontSize:48 }}>🔌</div>
-                <div style={{ fontSize:'1.2rem', fontWeight:700, color:'#dc2626' }}>Backend server is not running</div>
-                <div style={{ color:'#64748b', maxWidth:420, lineHeight:1.6 }}>
-                    Open a terminal in the project folder and run:
+                <div style={{ fontSize:48 }}>{isNetworkError ? '🔌' : '⚠️'}</div>
+                <div style={{ fontSize:'1.2rem', fontWeight:700, color:'#dc2626' }}>
+                    {isNetworkError ? 'Backend server is not running' : 'Failed to load students'}
                 </div>
-                <div style={{ background:'#1e293b', color:'#86efac', fontFamily:'monospace', fontSize:'0.95rem', padding:'12px 24px', borderRadius:8, letterSpacing:0.3 }}>
-                    cd Backend &amp;&amp; npm run dev
+                {isNetworkError ? (
+                    <>
+                        <div style={{ color:'#64748b', maxWidth:420, lineHeight:1.6 }}>Open a terminal in the project folder and run:</div>
+                        <div style={{ background:'#1e293b', color:'#86efac', fontFamily:'monospace', fontSize:'0.95rem', padding:'12px 24px', borderRadius:8, letterSpacing:0.3 }}>
+                            cd Backend &amp;&amp; npm run dev
+                        </div>
+                        <div style={{ color:'#94a3b8', fontSize:'0.85rem' }}>Then refresh this page — your students will appear here.</div>
+                    </>
+                ) : (
+                    <div style={{ color:'#64748b', maxWidth:420, lineHeight:1.6, background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8, padding:'10px 18px', fontSize:'0.875rem' }}>
+                        {apiError}
+                    </div>
+                )}
+                <div style={{ display:'flex', gap:12, marginTop:4 }}>
+                    <button
+                        onClick={() => { setApiError(''); setLoading(true); api.get('/students').then(res => setData((res.data || []).map(normStudent))).catch(err => setApiError(err.message)).finally(() => setLoading(false)); }}
+                        style={{ padding:'10px 22px', background:'#2563eb', color:'#fff', borderRadius:8, fontWeight:600, fontSize:'0.9rem', border:'none', cursor:'pointer' }}
+                    >
+                        Retry
+                    </button>
+                    <Link to="/students/add" style={{ padding:'10px 24px', background:'#4f46e5', color:'#fff', borderRadius:8, fontWeight:600, textDecoration:'none', fontSize:'0.9rem' }}>
+                        + Add First Student
+                    </Link>
                 </div>
-                <div style={{ color:'#94a3b8', fontSize:'0.85rem' }}>Then refresh this page — your students will appear here.</div>
-                <Link to="/students/add" style={{ marginTop:8, padding:'10px 24px', background:'#4f46e5', color:'#fff', borderRadius:8, fontWeight:600, textDecoration:'none', fontSize:'0.9rem' }}>
-                    + Add First Student
-                </Link>
             </div>
         </div>
     );
