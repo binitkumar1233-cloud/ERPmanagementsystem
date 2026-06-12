@@ -120,10 +120,6 @@ const PasswordGate = ({ pending, onClose }) => {
                         <span style={{ fontSize:'0.78rem', color:'#dc2626', fontWeight:600 }}>{err}</span>
                     </div>
                 )}
-                <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:'9px 14px', marginBottom:20, display:'flex', alignItems:'center', gap:6, justifyContent:'center' }}>
-                    <Key size={12} color="#94a3b8"/>
-                    <span style={{ fontSize:'0.73rem', color:'#64748b' }}>Default: <strong style={{ color:'#475569', fontFamily:'monospace' }}>Admin@123</strong></span>
-                </div>
                 <div style={{ display:'flex', gap:10 }}>
                     <button onClick={onClose} style={{ flex:1, padding:'11px 0', borderRadius:11, border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontSize:'0.85rem', color:'#64748b', fontWeight:500 }}>Cancel</button>
                     <button onClick={verify} style={{ flex:1, padding:'11px 0', borderRadius:11, border:'none', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', color:'white', cursor:'pointer', fontSize:'0.85rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:'0 4px 14px rgba(124,58,237,0.4)' }}>

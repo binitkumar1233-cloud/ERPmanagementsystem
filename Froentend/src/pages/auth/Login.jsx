@@ -12,7 +12,7 @@ const FEATURES = [
 ];
 
 export default function Login() {
-    const { login, loginWithGoogle, isAuthenticated } = useContext(AuthContext);
+    const { login, loginWithGoogle, isAuthenticated, user } = useContext(AuthContext);
     const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPass, setShowPass] = useState(false);
@@ -20,9 +20,11 @@ export default function Login() {
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Already logged in — go straight to dashboard
+    // Already logged in — redirect to the appropriate dashboard
     if (isAuthenticated || !!localStorage.getItem('erp_user')) {
-        return <Navigate to="/dashboard" replace />;
+        const storedRole = (() => { try { return JSON.parse(localStorage.getItem('erp_user') || '{}').role; } catch { return null; } })();
+        const role = user?.role || storedRole;
+        return <Navigate to={role === 'Student' ? '/student-dashboard' : '/dashboard'} replace />;
     }
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));

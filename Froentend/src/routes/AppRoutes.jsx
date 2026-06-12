@@ -33,14 +33,29 @@ import AdminPanel from '../pages/admin/AdminPanel.jsx';
 import Admissions from '../pages/admissions/Admissions.jsx';
 import AdmissionForm from '../pages/admissions/AdmissionForm.jsx';
 
-/* ── Protected wrapper ── */
+function getStoredRole() {
+    try { return JSON.parse(localStorage.getItem('erp_user') || '{}').role || null; }
+    catch { return null; }
+}
+
+/* ── Protected wrapper (admin/staff only) ── */
 function Protected({ children }) {
-    const { isAuthenticated } = useContext(AuthContext);
-    // Also check localStorage — React state may not be committed yet right after login
+    const { isAuthenticated, user } = useContext(AuthContext);
     const hasStoredUser = !!localStorage.getItem('erp_user');
-    return (isAuthenticated || hasStoredUser)
-        ? children
-        : <Navigate to="/login" replace />;
+    if (!isAuthenticated && !hasStoredUser) return <Navigate to="/login" replace />;
+    const role = user?.role || getStoredRole();
+    if (role === 'Student') return <Navigate to="/student-dashboard" replace />;
+    return children;
+}
+
+/* ── Student-only wrapper ── */
+function StudentProtected({ children }) {
+    const { isAuthenticated, user } = useContext(AuthContext);
+    const hasStoredUser = !!localStorage.getItem('erp_user');
+    if (!isAuthenticated && !hasStoredUser) return <Navigate to="/student-login" replace />;
+    const role = user?.role || getStoredRole();
+    if (role !== 'Student') return <Navigate to="/dashboard" replace />;
+    return children;
 }
 
 /* ── Layout wrapper with sidebar + footer ── */
@@ -70,6 +85,14 @@ const Page = (Component) => (
             <Component />
         </AppLayout>
     </Protected>
+);
+
+const StudentPage = (Component) => (
+    <StudentProtected>
+        <AppLayout>
+            <Component />
+        </AppLayout>
+    </StudentProtected>
 );
 
 export default function AppRoutes() {
@@ -105,8 +128,8 @@ export default function AppRoutes() {
             <Route path="/admin-panel" element={Page(AdminPanel)} />
             <Route path="/settings" element={Page(Settings)} />
             <Route path="/support" element={Page(Support)} />
-            <Route path="/student-dashboard" element={Page(StudentDashboard)} />
-            <Route path="/student-information" element={Page(StudentInformationCheck)} />
+            <Route path="/student-dashboard" element={StudentPage(StudentDashboard)} />
+            <Route path="/student-information" element={StudentPage(StudentInformationCheck)} />
             <Route path="/student" element={<Navigate to="/student-dashboard" replace />} />
 
             {/* Fallback */}
