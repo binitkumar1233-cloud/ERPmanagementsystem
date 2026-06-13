@@ -36,6 +36,9 @@ app.use(cors({
         if (!origin) return cb(null, true);
         // Allow any localhost port for local development
         if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true);
+        // Allow Firebase Hosting domains (*.web.app, *.firebaseapp.com)
+        if (/^https:\/\/[a-zA-Z0-9-]+\.web\.app$/.test(origin)) return cb(null, true);
+        if (/^https:\/\/[a-zA-Z0-9-]+\.firebaseapp\.com$/.test(origin)) return cb(null, true);
         // Allow configured production CLIENT_URL(s)
         const allowed = (process.env.CLIENT_URL || '').split(',').map(s => s.trim()).filter(Boolean);
         if (allowed.some(o => origin.startsWith(o))) return cb(null, true);

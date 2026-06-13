@@ -52,12 +52,12 @@ async function request(method, path, data) {
     let res;
     try {
         res = await fetch(`${BASE_URL}${path}`, config);
-    } catch {
+    } catch (_networkErr) {
         throw new Error('Cannot connect to server. Make sure the backend is running (npm run dev inside /Backend).');
     }
 
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: res.statusText }));
+        const err = await res.json().catch(() => ({ message: res.statusText || `HTTP ${res.status}` }));
 
         if (res.status === 401) {
             const authSource = localStorage.getItem('erp_auth_source');
