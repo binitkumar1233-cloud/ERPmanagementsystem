@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, BookOpen, Check, AlertCircle, User, Mail, Phone, GraduationCap } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import { authService } from '../../services/authService.js';
+import { api } from '../../services/api.js';
 
 export default function StudentRegister() {
     const { loginWithGoogle } = useContext(AuthContext);
@@ -22,8 +23,8 @@ export default function StudentRegister() {
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
-    const COURSES = ['B.Sc Computer Science', 'B.Com', 'B.A English', 'B.Tech', 'MBA', 'M.Sc', 'Diploma'];
-    const YEARS   = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+    const COURSES  = ['B.Sc Computer Science', 'B.Com', 'B.A English', 'B.Tech', 'MBA', 'M.Sc', 'Diploma'];
+    const YEARS    = ['1st', '2nd', '3rd', '4th'];
     const SECTIONS = ['A', 'B', 'C', 'D'];
 
     const nextStep = (e) => {
@@ -46,15 +47,35 @@ export default function StudentRegister() {
         }
         setLoading(true);
         try {
-            // Create Firebase account
-            const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
-            const { auth } = await import('../../config/firebase.js');
-            const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
-            await updateProfile(credential.user, { displayName: form.fullName });
+            // 1. Save student record to MongoDB (this enables email/password login)
+            await api.post('/auth/register-student', {
+                name:     form.fullName,
+                email:    form.email,
+                password: form.password,
+                phone:    form.phone    || undefined,
+                course:   form.course  || undefined,
+                year:     form.year    || '1st',
+                section:  form.section || 'A',
+            });
+
+            // 2. Create Firebase account (enables Google sign-in later)
+            try {
+                const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+                const { auth: fbAuth } = await import('../../config/firebase.js');
+                const credential = await createUserWithEmailAndPassword(fbAuth, form.email, form.password);
+                await updateProfile(credential.user, { displayName: form.fullName });
+            } catch (fbErr) {
+                // Firebase step failed but MongoDB record is saved — student can still
+                // log in via email/password. Non-fatal, so we proceed to success.
+                console.warn('Firebase account creation failed (non-fatal):', fbErr.message);
+            }
+
             setSuccess(true);
         } catch (err) {
             const code = err.code || '';
             if (code === 'auth/email-already-in-use') {
+                setError('An account with this email already exists. Please log in instead.');
+            } else if (err.message?.includes('Email already exists') || err.message?.includes('email')) {
                 setError('An account with this email already exists. Please log in instead.');
             } else if (code === 'auth/weak-password') {
                 setError('Password is too weak. Use at least 6 characters.');
@@ -223,7 +244,7 @@ export default function StudentRegister() {
                                     <label>Year</label>
                                     <select value={form.year} onChange={set('year')}>
                                         <option value="">Select year</option>
-                                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                        {YEARS.map(y => <option key={y} value={y}>{y} Year</option>)}
                                     </select>
                                 </div>
                                 <div className="sr-field">

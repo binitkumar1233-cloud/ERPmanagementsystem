@@ -184,4 +184,38 @@ router.post('/google', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
+/* POST /api/auth/register-student — public self-registration, no auth required */
+router.post('/register-student', async (req, res, next) => {
+    try {
+        const { name, email, password, phone, course, year, section } = req.body;
+        if (!name || !email || !password || !course)
+            return res.status(400).json({ success: false, message: 'Name, email, password and course are required' });
+
+        const bcrypt = require('bcryptjs');
+        const hashed = await bcrypt.hash(password, 12);
+
+        const student = await Student.create({
+            name,
+            email,
+            password: hashed,
+            phone:   phone   || undefined,
+            course,
+            year:    year    || '1st',
+            section: section || 'A',
+        });
+
+        const token = signToken(student._id);
+        res.status(201).json({
+            success: true,
+            token,
+            message: 'Student registered successfully',
+            data: {
+                id: student._id, name: student.name, email: student.email,
+                role: 'Student', course: student.course, year: student.year,
+                studentId: student.studentId,
+            },
+        });
+    } catch (err) { next(err); }
+});
+
 module.exports = router;
