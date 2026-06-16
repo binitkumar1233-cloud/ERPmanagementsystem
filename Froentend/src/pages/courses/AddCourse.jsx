@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { api } from '../../services/api.js';
+import { db } from '../../config/firebase.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { ArrowLeft, Save, BookOpen } from 'lucide-react';
 import { DEPARTMENTS } from '../../utils/constants.js';
@@ -23,20 +25,32 @@ export default function AddCourse() {
         e.preventDefault();
         setSubmitError('');
         setSaving(true);
+
+        const coursePayload = {
+            name: form.name,
+            code: form.code,
+            dept: form.dept,
+            duration: form.duration,
+            seats: Number(form.seats),
+            fees: Number(form.feePerYear),
+            status: form.status,
+            ...(form.description && { description: form.description }),
+        };
+
         try {
-            await api.post('/courses', {
-                name: form.name,
-                code: form.code,
-                dept: form.dept,
-                duration: form.duration,
-                seats: Number(form.seats),
-                fees: Number(form.feePerYear),
-                description: form.description || undefined,
-                status: form.status,
-            });
+            try {
+                await api.post('/courses', coursePayload);
+            } catch {
+                // Backend unavailable — save to Firebase Firestore
+                await addDoc(collection(db, 'courses'), {
+                    ...coursePayload,
+                    enrolled: 0,
+                    createdAt: serverTimestamp(),
+                });
+            }
             navigate('/courses');
         } catch (err) {
-            setSubmitError(err.message);
+            setSubmitError('Failed to save course. Please try again.');
         } finally {
             setSaving(false);
         }

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { collection, getDocs } from 'firebase/firestore';
 import { api } from '../../services/api.js';
+import { db } from '../../config/firebase.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -85,31 +87,26 @@ export default function Courses() {
     const [sortA,  setSortA]  = useState(true);
     const [data,   setData]   = useState([]);
     const [loading, setLoading] = useState(true);
-    const [apiError, setApiError] = useState('');
 
     useEffect(() => {
-        api.get('/courses')
-            .then(res => setData((res.data || []).map(normCourse)))
-            .catch(err => setApiError(err.message))
-            .finally(() => setLoading(false));
+        (async () => {
+            try {
+                const res = await api.get('/courses');
+                setData((res.data || []).map(normCourse));
+            } catch {
+                try {
+                    const snap = await getDocs(collection(db, 'courses'));
+                    setData(snap.docs.map(d => normCourse({ ...d.data(), _id: d.id })));
+                } catch { /* silent */ }
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, []);
 
     const DEPTS = ['All', ...new Set(data.map(c => c.dept))];
 
     if (loading) return <div className="erp-page"><Navbar title="Courses" subtitle="Manage academic programs and courses" /><div className="empty-state"><p>Loading courses…</p></div></div>;
-    if (apiError) return (
-        <div className="erp-page">
-            <Navbar title="Courses" subtitle="Manage academic programs and courses" />
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, gap:16, textAlign:'center', padding:32 }}>
-                <div style={{ fontSize:48 }}>🔌</div>
-                <div style={{ fontSize:'1.2rem', fontWeight:700, color:'#dc2626' }}>Backend server is not running</div>
-                <div style={{ background:'#1e293b', color:'#86efac', fontFamily:'monospace', fontSize:'0.95rem', padding:'12px 24px', borderRadius:8 }}>
-                    cd Backend &amp;&amp; npm run dev
-                </div>
-                <div style={{ color:'#94a3b8', fontSize:'0.85rem' }}>Then refresh this page.</div>
-            </div>
-        </div>
-    );
 
     const totalSeats    = data.reduce((s,c) => s+c.seats,    0);
     const totalEnrolled = data.reduce((s,c) => s+c.enrolled, 0);
@@ -142,7 +139,7 @@ export default function Courses() {
                     { label:'Active Courses',  value:data.filter(c=>c.status==='Active').length, icon:Award, gradient:'linear-gradient(135deg,#065f46,#059669)', glow:'rgba(16,185,129,0.28)', sub:'Currently running' },
                     { label:'Total Seats',     value:totalSeats,      icon:Layers,       gradient:'linear-gradient(135deg,#4c1d95,#7c3aed)', glow:'rgba(139,92,246,0.28)', sub:'Across all courses' },
                     { label:'Total Enrolled',  value:totalEnrolled,   icon:Users,        gradient:'linear-gradient(135deg,#92400e,#d97706)', glow:'rgba(245,158,11,0.28)', sub:`${totalSeats-totalEnrolled} seats available` },
-                    { label:'Avg Occupancy',   value:Math.round(totalEnrolled/totalSeats*100)+'%', icon:BarChart3, gradient:'linear-gradient(135deg,#0c4a6e,#0284c7)', glow:'rgba(2,132,199,0.28)', sub:`Avg rating ${avgRating} ★` },
+                    { label:'Avg Occupancy',   value:(totalSeats ? Math.round(totalEnrolled/totalSeats*100) : 0)+'%', icon:BarChart3, gradient:'linear-gradient(135deg,#0c4a6e,#0284c7)', glow:'rgba(2,132,199,0.28)', sub:`Avg rating ${avgRating} ★` },
                 ].map(({ label, value, icon:Icon, gradient, glow, sub }) => (
                     <div key={label} style={{ ...S.heroCard, background:gradient, boxShadow:`0 8px 24px ${glow}` }}>
                         <div style={S.heroTop}>
