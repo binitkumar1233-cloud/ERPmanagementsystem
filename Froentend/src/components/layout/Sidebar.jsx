@@ -81,6 +81,10 @@ export default function Sidebar() {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => {
+        document.documentElement.style.setProperty('--sidebar-width', collapsed ? '64px' : '260px');
+    }, [collapsed]);
+
+    useEffect(() => {
         const onToggle = () => setMobileOpen(v => !v);
         window.addEventListener('toggle-mobile-sidebar', onToggle);
         return () => window.removeEventListener('toggle-mobile-sidebar', onToggle);
@@ -95,7 +99,6 @@ export default function Sidebar() {
             )}
 
             <style>{`
-                :root { --sidebar-width: ${collapsed ? '64px' : '260px'}; }
                 .sidebar-transition { transition: width 0.24s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1); }
                 .sb-link:hover { background: rgba(255,255,255,0.06) !important; color: rgba(255,255,255,0.9) !important; }
                 .sidebar-transition::-webkit-scrollbar { width: 3px; }
