@@ -1,8 +1,10 @@
 import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, BookOpen, Check, AlertCircle, User, Mail, Phone, GraduationCap } from 'lucide-react';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import { authService } from '../../services/authService.js';
+import { auth as fbAuth } from '../../config/firebase.js';
 import { api } from '../../services/api.js';
 
 export default function StudentRegister() {
@@ -60,8 +62,6 @@ export default function StudentRegister() {
 
             // 2. Create Firebase account (enables Google sign-in later)
             try {
-                const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
-                const { auth: fbAuth } = await import('../../config/firebase.js');
                 const credential = await createUserWithEmailAndPassword(fbAuth, form.email, form.password);
                 await updateProfile(credential.user, { displayName: form.fullName });
             } catch (fbErr) {

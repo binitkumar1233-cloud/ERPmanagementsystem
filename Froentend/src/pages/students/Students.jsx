@@ -158,7 +158,7 @@ export default function Students() {
             <div style={S.heroGrid}>
                 {[
                     { label: 'Total Students',     value: data.length,                                      icon: GraduationCap, gradient: 'linear-gradient(135deg,#1e3a8a,#2563eb)', glow: 'rgba(37,99,235,0.28)',  sub: `${data.filter(s=>s.campus==='Main').length} Main · ${data.filter(s=>s.campus==='North').length} North · ${data.filter(s=>s.campus==='South').length} South` },
-                    { label: 'Active Students',    value: data.filter(s=>s.status==='Active').length,        icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.28)', sub: `${Math.round(data.filter(s=>s.status==='Active').length/data.length*100)}% enrollment rate` },
+                    { label: 'Active Students',    value: data.filter(s=>s.status==='Active').length,        icon: Users,         gradient: 'linear-gradient(135deg,#065f46,#059669)', glow: 'rgba(16,185,129,0.28)', sub: `${data.length ? Math.round(data.filter(s=>s.status==='Active').length/data.length*100) : 0}% enrollment rate` },
                     { label: 'Fee Pending',        value: data.filter(s=>s.fees==='Pending').length,         icon: AlertTriangle,  gradient: 'linear-gradient(135deg,#92400e,#d97706)', glow: 'rgba(245,158,11,0.28)', sub: 'Awaiting payment' },
                     { label: 'Fee Overdue',        value: data.filter(s=>s.fees==='Overdue').length,         icon: XCircle,        gradient: 'linear-gradient(135deg,#7f1d1d,#dc2626)', glow: 'rgba(220,38,38,0.28)',  sub: 'Immediate action needed' },
                 ].map(({ label, value, icon: Icon, gradient, glow, sub }) => (
