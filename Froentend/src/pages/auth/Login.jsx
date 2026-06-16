@@ -1,6 +1,6 @@
 import { useState, useContext } from 'react';
-import { useNavigate, Link, Navigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, BookOpen, Shield, Users, BarChart2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, ArrowRight, BookOpen, Shield, Users, BarChart2, LogOut } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import Logo from '../../components/common/Logo.jsx';
 
@@ -19,13 +19,18 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
+    const [switchMode, setSwitchMode] = useState(false);
 
-    // Already logged in — redirect to the appropriate dashboard
-    if (isAuthenticated || !!localStorage.getItem('erp_user')) {
-        const storedRole = (() => { try { return JSON.parse(localStorage.getItem('erp_user') || '{}').role; } catch { return null; } })();
-        const role = user?.role || storedRole;
-        return <Navigate to={role === 'Student' ? '/student-dashboard' : '/dashboard'} replace />;
-    }
+    const storedRaw  = localStorage.getItem('erp_user');
+    const storedUser = (() => { try { return JSON.parse(storedRaw || '{}'); } catch { return {}; } })();
+    const isLoggedIn = !switchMode && (isAuthenticated || !!storedRaw);
+
+    const handleSwitchAccount = () => {
+        localStorage.removeItem('erp_user');
+        localStorage.removeItem('erp_token');
+        localStorage.removeItem('erp_auth_source');
+        setSwitchMode(true);
+    };
 
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -114,9 +119,41 @@ export default function Login() {
                 </div>
             </div>
 
-            {/* ── Right: Form ── */}
+            {/* ── Right: Session card OR Login form ── */}
             <div className="login-form-side">
                 <div className="login-form-wrap">
+
+                {isLoggedIn ? (() => {
+                    const role = user?.role || storedUser.role;
+                    const name = user?.name || storedUser.name || 'Administrator';
+                    const email = user?.email || storedUser.email || '';
+                    const dest  = role === 'Student' ? '/student-dashboard' : '/dashboard';
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+                    return (
+                        <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                            <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a8a, #4f46e5)', display: 'grid', placeItems: 'center', margin: '0 auto 16px', boxShadow: '0 4px 20px rgba(79,70,229,0.35)', fontSize: '1.4rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>
+                                {initials}
+                            </div>
+                            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: 6, fontFamily: 'var(--font-display)' }}>Already signed in</h2>
+                            <p style={{ fontSize: '0.87rem', fontWeight: 600, color: '#334155', marginBottom: 2 }}>{name}</p>
+                            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 28 }}>{role}{email ? ` · ${email}` : ''}</p>
+
+                            <Link
+                                to={dest}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '12px', borderRadius: 10, background: 'linear-gradient(135deg, #1e3a8a, #4f46e5)', color: 'white', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none', marginBottom: 12, boxShadow: '0 4px 14px rgba(79,70,229,0.3)' }}
+                            >
+                                Continue to Dashboard <ArrowRight size={16} />
+                            </Link>
+
+                            <button
+                                onClick={handleSwitchAccount}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '11px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'white', color: '#475569', fontWeight: 600, fontSize: '0.87rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                            >
+                                <LogOut size={15} /> Sign out &amp; use a different account
+                            </button>
+                        </div>
+                    );
+                })() : <>
 
                     <div className="lf-header">
                         <h2>Welcome back</h2>
@@ -207,6 +244,7 @@ export default function Login() {
                         <p>Need student access?</p>
                         <Link to="/student-login" className="btn btn-outline">Go to Student Portal</Link>
                     </div>
+                </>}
                 </div>
             </div>
 
