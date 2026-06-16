@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { collection, getDocs } from 'firebase/firestore';
 import { api } from '../../services/api.js';
+import { db } from '../../config/firebase.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -73,10 +75,20 @@ export default function Students() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        api.get('/students')
-            .then(res => setData((res.data || []).map(normStudent)))
-            .catch(() => {})
-            .finally(() => setLoading(false));
+        (async () => {
+            try {
+                const res = await api.get('/students');
+                setData((res.data || []).map(normStudent));
+            } catch {
+                // Backend unavailable — read from Firestore
+                try {
+                    const snap = await getDocs(collection(db, 'students'));
+                    setData(snap.docs.map(d => normStudent({ ...d.data(), _id: d.id })));
+                } catch { /* silent */ }
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, []);
 
     const toggleSort = key => {

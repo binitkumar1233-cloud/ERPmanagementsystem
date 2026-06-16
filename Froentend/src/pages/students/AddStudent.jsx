@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { api } from '../../services/api.js';
+import { db } from '../../config/firebase.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import {
     ArrowLeft, UserPlus, User, Phone, Mail, MapPin, Calendar,
@@ -197,26 +199,39 @@ export default function AddStudent() {
         e.preventDefault();
         if (!validate()) return;
         setSaving(true);
+
+        const studentPayload = {
+            name: `${form.firstName} ${form.lastName}`.trim(),
+            email: form.email,
+            phone: form.phone,
+            course: form.course,
+            year: YEAR_LABELS[String(form.year)] || '1st',
+            status: form.status,
+            ...(form.dob           && { dob: form.dob }),
+            ...(form.gender        && { gender: form.gender }),
+            ...(form.city          && { city: form.city }),
+            ...(form.address       && { address: form.address }),
+            ...(form.rollNo        && { rollNumber: form.rollNo }),
+            ...(form.admissionDate && { admissionDate: form.admissionDate }),
+            ...(form.guardianName  && { parentName: form.guardianName }),
+            ...(form.guardianPhone && { parentPhone: form.guardianPhone }),
+        };
+
         try {
-            await api.post('/students', {
-                name: `${form.firstName} ${form.lastName}`.trim(),
-                email: form.email,
-                phone: form.phone,
-                course: form.course,
-                year: YEAR_LABELS[String(form.year)] || '1st',
-                dob: form.dob || undefined,
-                gender: form.gender || undefined,
-                address: form.address || undefined,
-                rollNumber: form.rollNo || undefined,
-                admissionDate: form.admissionDate || undefined,
-                status: form.status,
-                parentName: form.guardianName || undefined,
-                parentPhone: form.guardianPhone || undefined,
-            });
+            try {
+                // Try MongoDB backend first
+                await api.post('/students', studentPayload);
+            } catch {
+                // Backend unavailable — save to Firebase Firestore
+                await addDoc(collection(db, 'students'), {
+                    ...studentPayload,
+                    createdAt: serverTimestamp(),
+                });
+            }
             setDone(true);
             setTimeout(() => navigate('/students'), 1800);
         } catch (err) {
-            setErrors(er => ({ ...er, submit: err.message }));
+            setErrors(er => ({ ...er, submit: 'Failed to save student. Please try again.' }));
         } finally {
             setSaving(false);
         }
