@@ -1,8 +1,12 @@
 {
   "name": "edumanage-erp",
   "version": "1.0.0",
+  "description": "School & College ERP Management System",
   "scripts": {
-    "start": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"green,blue\" \"npm run dev --prefix Backend\" \"npm run dev --prefix Froentend\""
+    "dev":         "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"green,blue\" \"npm run dev --prefix Backend\" \"npm run dev --prefix Froentend\"",
+    "start":       "npm run dev",
+    "build":       "npm run build --prefix Froentend",
+    "install:all": "npm install && npm install --prefix Backend && npm install --prefix Froentend"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"
