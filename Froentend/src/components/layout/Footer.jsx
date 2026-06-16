@@ -33,7 +33,7 @@ const CONTACT = [
 ];
 
 const SOCIALS = [
-    { icon: Github,    href: '#',                                                                 label: 'GitHub'    },
+    { icon: Github,    href: 'https://github.com/binitkumar1233-cloud',                          label: 'GitHub'    },
     { icon: Twitter,   href: '#',                                                                 label: 'Twitter'   },
     { icon: Linkedin,  href: '#',                                                                 label: 'LinkedIn'  },
     { icon: Instagram, href: 'https://www.instagram.com/kumar_binit1001?igsh=cHE5MjIxb24xeXpx', label: 'Instagram' },
