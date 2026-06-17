@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { api } from '../../services/api.js';
 import { db } from '../../config/firebase.js';
 import Navbar from '../../components/layout/Navbar.jsx';
@@ -73,6 +73,17 @@ export default function Students() {
     const [sortAsc, setSortAsc] = useState(true);
     const [data, setData]       = useState([]);
     const [loading, setLoading] = useState(true);
+    const [viewStudent, setViewStudent] = useState(null);
+    const [deleting, setDeleting] = useState(null);
+
+    const handleDelete = async (s) => {
+        if (!window.confirm(`Delete ${s.name}? This cannot be undone.`)) return;
+        setDeleting(s.id);
+        try { await api.delete('/students/' + s.id); } catch { /* backend unavailable */ }
+        try { await deleteDoc(doc(db, 'students', s.id)); } catch { /* not in Firestore */ }
+        setData(prev => prev.filter(x => x.id !== s.id));
+        setDeleting(null);
+    };
 
     useEffect(() => {
         (async () => {
@@ -279,9 +290,9 @@ export default function Students() {
                                         <td><span className={`badge ${feeBadge(s.fees)}`}>{s.fees}</span></td>
                                         <td>
                                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                                <button className="tbl-btn" title="View"><Eye    size={13} /></button>
-                                                <button className="tbl-btn" title="Edit"><Edit2  size={13} /></button>
-                                                <button className="tbl-btn danger" title="Delete"><Trash2 size={13} /></button>
+                                                <button className="tbl-btn" title="View"   onClick={() => setViewStudent(s)}><Eye   size={13} /></button>
+                                                <button className="tbl-btn" title="Edit"   onClick={() => setViewStudent(s)}><Edit2 size={13} /></button>
+                                                <button className="tbl-btn danger" title="Delete" disabled={deleting === s.id} onClick={() => handleDelete(s)}><Trash2 size={13} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -348,9 +359,9 @@ export default function Students() {
                                     <span style={campusBadge(s.campus)}>{s.campus} Campus</span>
                                     <span style={{ ...S.deptTag, background: `${DEPT_COLORS[s.dept]}13`, color: DEPT_COLORS[s.dept] }}>{s.dept}</span>
                                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                                        <button className="tbl-btn" title="View"><Eye   size={12} /></button>
-                                        <button className="tbl-btn" title="Edit"><Edit2 size={12} /></button>
-                                        <button className="tbl-btn danger" title="Delete"><Trash2 size={12} /></button>
+                                        <button className="tbl-btn" title="View"   onClick={() => setViewStudent(s)}><Eye   size={12} /></button>
+                                        <button className="tbl-btn" title="Edit"   onClick={() => setViewStudent(s)}><Edit2 size={12} /></button>
+                                        <button className="tbl-btn danger" title="Delete" disabled={deleting === s.id} onClick={() => handleDelete(s)}><Trash2 size={12} /></button>
                                     </div>
                                 </div>
                             </div>
@@ -380,6 +391,48 @@ export default function Students() {
                     </div>
                 )}
             </div>
+
+            {/* ── View Student Modal ── */}
+            {viewStudent && (
+                <div style={S.modalOverlay} onClick={() => setViewStudent(null)}>
+                    <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+                        <div style={S.modalHeader}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ ...S.avatar, width: 48, height: 48, fontSize: '1.1rem' }}>
+                                    {viewStudent.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: '1rem' }}>{viewStudent.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{viewStudent.id} · {viewStudent.roll}</div>
+                                </div>
+                            </div>
+                            <button style={S.modalClose} onClick={() => setViewStudent(null)}>✕</button>
+                        </div>
+                        <div style={S.modalBody}>
+                            {[
+                                ['Email',         viewStudent.email],
+                                ['Phone',         viewStudent.phone],
+                                ['Course',        viewStudent.course],
+                                ['Year',          `Year ${viewStudent.year}`],
+                                ['Status',        viewStudent.status],
+                                ['Department',    viewStudent.dept],
+                                ['Campus',        viewStudent.campus],
+                                ['Fee Status',    viewStudent.fees],
+                                ['Gender',        viewStudent.gender],
+                                ['Date of Birth', viewStudent.dob],
+                                ['City',          viewStudent.city],
+                                ['Guardian',      viewStudent.parentName],
+                                ['Guardian Ph',   viewStudent.parentPhone],
+                            ].filter(([, v]) => v).map(([label, value]) => (
+                                <div key={label} style={S.modalRow}>
+                                    <span style={S.modalLabel}>{label}</span>
+                                    <span style={S.modalValue}>{value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -442,4 +495,14 @@ const S = {
     pageNavBtn: { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', color: 'var(--text-secondary)', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer' },
     pageNumBtn: { width: 34, height: 34, borderRadius: 8, border: '1px solid var(--border)', background: 'white', color: 'var(--text-secondary)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'grid', placeItems: 'center' },
     pageNumActive: { background: '#2563eb', color: 'white', border: '1px solid #2563eb' },
+
+    /* Modal */
+    modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 },
+    modalBox:     { background: 'white', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' },
+    modalHeader:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 16px', borderBottom: '1px solid #e2e8f0' },
+    modalBody:    { padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '60vh', overflowY: 'auto' },
+    modalRow:     { display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '0.82rem' },
+    modalLabel:   { color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 },
+    modalValue:   { color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-all' },
+    modalClose:   { width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-muted)', display: 'grid', placeItems: 'center' },
 };
