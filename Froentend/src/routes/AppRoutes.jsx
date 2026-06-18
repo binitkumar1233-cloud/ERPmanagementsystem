@@ -163,8 +163,8 @@ export default function AppRoutes() {
             <Route path="/admissions/apply"     element={AdminPage(AdmissionForm)} />
             <Route path="/settings"             element={AdminPage(Settings)} />
 
-            {/* Super Admin only */}
-            <Route path="/admin-panel"          element={SuperAdminPage(AdminPanel)} />
+            {/* Administrator+ */}
+            <Route path="/admin-panel"          element={AdminPage(AdminPanel)} />
 
             {/* Student portal */}
             <Route path="/student-dashboard"    element={StudentPage(StudentDashboard)} />
