@@ -1,8 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Is the request from an authenticated Firebase user?
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Students, courses, teachers — authenticated users can read;
+    // writes are guarded at the application layer (RBAC + JWT).
+    // When the backend is deployed, these writes will require a
+    // valid JWT checked server-side; until then the app enforces RBAC.
+    match /students/{docId} {
+      allow read:          if isAuth();
+      allow create, update: if isAuth();
+      allow delete:        if isAuth();
+    }
+
+    match /courses/{docId} {
+      allow read:          if isAuth();
+      allow create, update: if isAuth();
+      allow delete:        if isAuth();
+    }
+
+    match /teachers/{docId} {
+      allow read:          if isAuth();
+      allow create, update: if isAuth();
+      allow delete:        if isAuth();
+    }
+
+    // Audit logs — append-only; no client can update or delete an entry.
+    // This preserves the integrity of the audit trail (GDPR / FERPA).
+    match /auditLogs/{docId} {
+      allow create: if isAuth();
+      allow read:   if isAuth();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // User profiles — a user may read their own record only.
+    match /users/{uid} {
+      allow read:  if isAuth() && request.auth.uid == uid;
+      allow write: if isAuth();
+    }
+
+    // Block everything else by default.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { api } from '../../services/api.js';
 import { db } from '../../config/firebase.js';
+import { logAuditEvent, AUDIT_ACTIONS } from '../../utils/auditLog.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import {
     ArrowLeft, UserPlus, User, Phone, Mail, MapPin, Calendar,
@@ -228,6 +229,7 @@ export default function AddStudent() {
                     createdAt: serverTimestamp(),
                 });
             }
+            logAuditEvent(AUDIT_ACTIONS.STUDENT_CREATE, { name: studentPayload.name, email: studentPayload.email });
             setDone(true);
             setTimeout(() => navigate('/students'), 1800);
         } catch (err) {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { api } from '../../services/api.js';
 import { db } from '../../config/firebase.js';
+import { logAuditEvent, AUDIT_ACTIONS } from '../../utils/auditLog.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -81,6 +82,7 @@ export default function Students() {
         setDeleting(s.id);
         try { await api.delete('/students/' + s.id); } catch { /* backend unavailable */ }
         try { await deleteDoc(doc(db, 'students', s.id)); } catch { /* not in Firestore */ }
+        logAuditEvent(AUDIT_ACTIONS.STUDENT_DELETE, { id: s.id, name: s.name, email: s.email });
         setData(prev => prev.filter(x => x.id !== s.id));
         setDeleting(null);
     };

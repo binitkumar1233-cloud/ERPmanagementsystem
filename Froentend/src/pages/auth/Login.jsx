@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, BookOpen, Shield, Users, BarChart2, LogOut } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import Logo from '../../components/common/Logo.jsx';
+import { logAuditEvent, AUDIT_ACTIONS } from '../../utils/auditLog.js';
 
 const FEATURES = [
     { icon: Users, title: 'Student Management', desc: 'Complete lifecycle from admission to graduation' },
@@ -40,8 +41,10 @@ export default function Login() {
         setLoading(true);
         try {
             await login(form.email, form.password);
+            logAuditEvent(AUDIT_ACTIONS.LOGIN, { method: 'email', email: form.email });
             navigate('/dashboard');
         } catch (err) {
+            logAuditEvent(AUDIT_ACTIONS.LOGIN_FAILED, { method: 'email', email: form.email });
             setError(firebaseError(err.code) || err.message || 'Invalid email or password.');
         } finally {
             setLoading(false);
@@ -53,9 +56,11 @@ export default function Login() {
         setGoogleLoading(true);
         try {
             await loginWithGoogle();
+            logAuditEvent(AUDIT_ACTIONS.LOGIN, { method: 'google' });
             navigate('/dashboard');
         } catch (err) {
             if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+                logAuditEvent(AUDIT_ACTIONS.LOGIN_FAILED, { method: 'google' });
                 setError(firebaseError(err.code) || err.message || 'Google sign-in failed.');
             }
             setGoogleLoading(false);
