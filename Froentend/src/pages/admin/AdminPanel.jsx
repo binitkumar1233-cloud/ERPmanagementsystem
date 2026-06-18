@@ -25,7 +25,7 @@ const COURSES   = ['B.Tech CS','MBA','B.Sc Physics','B.Com','M.Sc Mathematics','
 const YEARS     = ['1st','2nd','3rd','4th'];
 const DEPT_LIST = ['CS','Mathematics','Physics','Electronics','Commerce','Management','English','Biology','Chemistry'];
 const fmt = n => `₹${Number(n).toLocaleString('en-IN')}`;
-const ADMIN_PASSWORD = 'Admin@123';
+const ADMIN_PASSWORD = 'binit@340';
 
 const STU_FEE_MAP = { Paid:{ bg:'#d1fae5',color:'#065f46' }, Pending:{ bg:'#fef3c7',color:'#92400e' }, Overdue:{ bg:'#fef2f2',color:'#991b1b' }, Partial:{ bg:'#dbeafe',color:'#1e3a8a' } };
 const STATUS_MAP  = { Active:{ bg:'#dcfce7',color:'#15803d' }, Inactive:{ bg:'#f1f5f9',color:'#64748b' } };
