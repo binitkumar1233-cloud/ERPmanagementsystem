@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
 import { api } from '../../services/api.js';
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase.js';
+import { getAuditLogs } from '../../utils/auditLog.js';
 import {
     Shield, Users, GraduationCap, BookOpen, CreditCard,
     Search, Plus, Edit2, Trash2, Eye, EyeOff, X, Download, Upload,
@@ -172,13 +175,76 @@ export default function AdminPanel() {
     const [confirm, setConfirm] = useState(null);
     const [pwGate,  setPwGate]  = useState(null);
 
-    /* ── Fetch helpers ── */
-    const fetchAdmins   = () => api.get('/admin/users').then(r => setAdmins((r.data||[]).map(normUser))).catch(()=>{});
-    const fetchStudents = () => api.get('/students').then(r => setStudents((r.data||[]).map(normStu))).catch(()=>{});
-    const fetchTeachers = () => api.get('/teachers').then(r => setTeachers((r.data||[]).map(normTch))).catch(()=>{});
-    const fetchCourses  = () => api.get('/courses').then(r => setCourses((r.data||[]).map(normCrs))).catch(()=>{});
-    const fetchFees     = () => api.get('/fees/structures').then(r => setFees((r.data||[]).map(normFee))).catch(()=>{});
-    const fetchLogs     = () => api.get('/admin/logs').then(r => setLogs((r.data||[]).map(normLog))).catch(()=>{});
+    /* ── Fetch helpers (backend → Firestore fallback) ── */
+    const fetchAdmins = async () => {
+        try {
+            const r = await api.get('/admin/users');
+            setAdmins((r.data||[]).map(normUser));
+        } catch {
+            try {
+                const snap = await getDocs(collection(db, 'adminUsers'));
+                setAdmins(snap.docs.map(d => normUser({ ...d.data(), _id: d.id })));
+            } catch {}
+        }
+    };
+    const fetchStudents = async () => {
+        try {
+            const r = await api.get('/students');
+            setStudents((r.data||[]).map(normStu));
+        } catch {
+            try {
+                const snap = await getDocs(collection(db, 'students'));
+                setStudents(snap.docs.map(d => normStu({ ...d.data(), _id: d.id })));
+            } catch {}
+        }
+    };
+    const fetchTeachers = async () => {
+        try {
+            const r = await api.get('/teachers');
+            setTeachers((r.data||[]).map(normTch));
+        } catch {
+            try {
+                const snap = await getDocs(collection(db, 'teachers'));
+                setTeachers(snap.docs.map(d => normTch({ ...d.data(), _id: d.id })));
+            } catch {}
+        }
+    };
+    const fetchCourses = async () => {
+        try {
+            const r = await api.get('/courses');
+            setCourses((r.data||[]).map(normCrs));
+        } catch {
+            try {
+                const snap = await getDocs(collection(db, 'courses'));
+                setCourses(snap.docs.map(d => normCrs({ ...d.data(), _id: d.id })));
+            } catch {}
+        }
+    };
+    const fetchFees = async () => {
+        try {
+            const r = await api.get('/fees/structures');
+            setFees((r.data||[]).map(normFee));
+        } catch {
+            try {
+                const snap = await getDocs(collection(db, 'feeStructures'));
+                setFees(snap.docs.map(d => normFee({ ...d.data(), _id: d.id })));
+            } catch {}
+        }
+    };
+    const fetchLogs = async () => {
+        try {
+            const r = await api.get('/admin/logs');
+            setLogs((r.data||[]).map(normLog));
+        } catch {
+            try {
+                const fsLogs = await getAuditLogs(200);
+                setLogs(fsLogs.map(l => ({
+                    id: l.id, user: l.userName, action: l.action,
+                    module: l.module, time: l.time, ip: '—', severity: l.severity,
+                })));
+            } catch {}
+        }
+    };
 
     useEffect(() => {
         fetchAdmins(); fetchStudents(); fetchTeachers(); fetchCourses(); fetchFees(); fetchLogs();
@@ -212,31 +278,61 @@ export default function AdminPanel() {
         if (!f.code?.trim() && type==='course') e.code = 'Required';
         if (Object.keys(e).length) { setFerr(e); return; }
         setSaveErr('');
+
+        // col map: type → Firestore collection name
+        const COL = { admin:'adminUsers', student:'students', teacher:'teachers', course:'courses', fee:'feeStructures' };
+
         try {
             if (type === 'admin') {
                 const p = { name:f.name, email:f.email, role:f.role, dept:f.dept, status:f.status };
-                if (mode==='add') { p.password = 'Admin@123'; await api.post('/admin/users', p); }
-                else await api.put('/admin/users/'+f.id, p);
+                if (mode === 'add') {
+                    try { await api.post('/admin/users', { ...p, password: 'Admin@123' }); }
+                    catch { await addDoc(collection(db, COL.admin), { ...p, createdAt: serverTimestamp(), lastLogin: null }); }
+                } else {
+                    try { await api.put('/admin/users/'+f.id, p); }
+                    catch { await updateDoc(doc(db, COL.admin, f.id), p); }
+                }
                 await fetchAdmins();
             } else if (type === 'student') {
                 const p = { name:f.name, email:f.email, course:f.course, year:f.year, phone:f.phone, fees:f.fees, status:f.status };
-                if (mode==='add') await api.post('/students', p);
-                else await api.put('/students/'+f.id, p);
+                if (mode === 'add') {
+                    try { await api.post('/students', p); }
+                    catch { await addDoc(collection(db, COL.student), { ...p, createdAt: serverTimestamp() }); }
+                } else {
+                    try { await api.put('/students/'+f.id, p); }
+                    catch { await updateDoc(doc(db, COL.student, f.id), p); }
+                }
                 await fetchStudents();
             } else if (type === 'teacher') {
                 const p = { name:f.name, email:f.email, dept:f.dept, designation:f.designation, phone:f.phone, status:f.status };
-                if (mode==='add') await api.post('/teachers', p);
-                else await api.put('/teachers/'+f.id, p);
+                if (mode === 'add') {
+                    try { await api.post('/teachers', p); }
+                    catch { await addDoc(collection(db, COL.teacher), { ...p, createdAt: serverTimestamp() }); }
+                } else {
+                    try { await api.put('/teachers/'+f.id, p); }
+                    catch { await updateDoc(doc(db, COL.teacher, f.id), p); }
+                }
                 await fetchTeachers();
             } else if (type === 'course') {
                 const p = { name:f.name, code:f.code, dept:f.dept, seats:Number(f.seats), fees:Number(f.fees), duration:f.duration, status:f.status };
-                if (mode==='add') await api.post('/courses', p);
-                else await api.put('/courses/'+f.id, p);
+                if (mode === 'add') {
+                    try { await api.post('/courses', p); }
+                    catch { await addDoc(collection(db, COL.course), { ...p, enrolled: 0, createdAt: serverTimestamp() }); }
+                } else {
+                    try { await api.put('/courses/'+f.id, p); }
+                    catch { await updateDoc(doc(db, COL.course, f.id), p); }
+                }
                 await fetchCourses();
             } else if (type === 'fee') {
                 const p = { course:f.course, tuition:Number(f.tuition)||0, lab:Number(f.lab)||0, library:Number(f.library)||0, sports:Number(f.sports)||0, year:f.year, status:f.status };
-                if (mode==='add') await api.post('/fees/structures', p);
-                else await api.put('/fees/structures/'+f.id, p);
+                p.total = p.tuition + p.lab + p.library + p.sports;
+                if (mode === 'add') {
+                    try { await api.post('/fees/structures', p); }
+                    catch { await addDoc(collection(db, COL.fee), { ...p, createdAt: serverTimestamp() }); }
+                } else {
+                    try { await api.put('/fees/structures/'+f.id, p); }
+                    catch { await updateDoc(doc(db, COL.fee, f.id), p); }
+                }
                 await fetchFees();
             }
             closeModal();
@@ -246,13 +342,11 @@ export default function AdminPanel() {
     }
 
     async function doDelete(type, id, localRemove) {
-        const ep = { admin:'/admin/users', student:'/students', teacher:'/teachers', course:'/courses', fee:'/fees/structures' };
-        try {
-            await api.delete(ep[type]+'/'+id);
-            localRemove();
-        } catch (err) {
-            alert('Delete failed: '+(err.message||'Unknown error'));
-        }
+        const ep  = { admin:'/admin/users', student:'/students', teacher:'/teachers', course:'/courses', fee:'/fees/structures' };
+        const col = { admin:'adminUsers',   student:'students',  teacher:'teachers',  course:'courses',  fee:'feeStructures' };
+        try { await api.delete(ep[type]+'/'+id); } catch { /* backend unavailable */ }
+        try { await deleteDoc(doc(db, col[type], id)); } catch { /* not in Firestore */ }
+        localRemove();
         setConfirm(null);
     }
 
