@@ -24,6 +24,7 @@ const lmsRoutes        = require('./routes/lms');
 const examRoutes       = require('./routes/exams');
 const adminRoutes      = require('./routes/admin');
 const supportRoutes    = require('./routes/support');
+const paymentRoutes    = require('./routes/payments');
 
 connectDB();
 
@@ -65,6 +66,7 @@ app.use('/api/lms',        lmsRoutes);
 app.use('/api/exams',      examRoutes);
 app.use('/api/admin',      adminRoutes);
 app.use('/api/support',    supportRoutes);
+app.use('/api/payments',   paymentRoutes);
 
 /* ── Health Check ── */
 app.get('/api/health', (req, res) => {

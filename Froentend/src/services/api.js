@@ -38,9 +38,12 @@ async function tryExchangeFirebaseToken() {
 
 async function request(method, path, data) {
     const token = localStorage.getItem('erp_token');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const config = {
         method,
+        signal: controller.signal,
         headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -52,7 +55,9 @@ async function request(method, path, data) {
     let res;
     try {
         res = await fetch(`${BASE_URL}${path}`, config);
+        clearTimeout(timeoutId);
     } catch (_networkErr) {
+        clearTimeout(timeoutId);
         throw new Error('Cannot connect to server. Make sure the backend is running (npm run dev inside /Backend).');
     }
 

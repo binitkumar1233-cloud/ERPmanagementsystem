@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
 import {
@@ -8,6 +8,7 @@ import {
     TrendingUp, IndianRupee, ChevronRight, BarChart3,
 } from 'lucide-react';
 import { getAvatarColor } from '../../utils/helpers.js';
+import { openRazorpay } from '../../utils/razorpay.js';
 
 const FEE_COLUMNS = [
     { label: 'Fee ID',      key: 'id'      },
@@ -26,8 +27,6 @@ const FEE_COLUMNS = [
    HELPERS
 ══════════════════════════════════════════ */
 const fmt     = n  => '₹' + Number(n).toLocaleString('en-IN');
-const fmtCard = v  => v.replace(/\D/g,'').slice(0,16).replace(/(.{4})/g,'$1 ').trim();
-const fmtExp  = v  => { const d = v.replace(/\D/g,'').slice(0,4); return d.length > 2 ? d.slice(0,2)+'/'+d.slice(2) : d; };
 const nowStr  = () => new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 
 /* ══════════════════════════════════════════
@@ -71,8 +70,6 @@ const FEE_STRUCTURES = [
       autoBillDefault:true },
 ];
 
-const BANKS   = ['State Bank of India','HDFC Bank','ICICI Bank','Axis Bank','Kotak Mahindra','Punjab National Bank','Bank of Baroda','Canara Bank'];
-const WALLETS = ['Paytm','PhonePe','Google Pay','Amazon Pay'];
 const MANUAL_METHODS = ['Cash','Cheque','DD','Bank Transfer'];
 
 const STATUS_CFG = {
@@ -90,7 +87,7 @@ const SEED_NOTIFS = [
     { id:'N005', sid:'STU006', name:'Amit Verma',   course:'B.Tech CSE',            due:45000, channel:'SMS',         sentAt:'02 Jun, 10:15 AM', status:'Delivered', type:'Payment Due Reminder' },
 ];
 
-const GW0 = { open:false, fee:null, step:'select', method:'', upiId:'', cardNum:'', cardExp:'', cardCvv:'', cardName:'', bank:'', wallet:'', walletPhone:'', txnId:'' };
+const GW0 = { open:false, fee:null, step:'idle', txnId:'', orderId:'', verified:false, errMsg:'' };
 
 /* ══════════════════════════════════════════
    COMPONENT
@@ -107,8 +104,6 @@ export default function Fees() {
     const [manDone, setManDone] = useState(false);
 
     const [gw, setGw]   = useState(GW0);
-    const gwTimer        = useRef(null);
-    const setG           = (k, v) => setGw(p => ({ ...p, [k]: v }));
 
     const [notifs, setNotifs]     = useState(SEED_NOTIFS);
     const [sendId, setSendId]     = useState(null);
@@ -161,23 +156,27 @@ export default function Fees() {
         setTimeout(()=>{ setMan(null); setManDone(false); }, 1800);
     };
 
-    /* Gateway */
-    const openGw  = r => { clearTimeout(gwTimer.current); setGw({...GW0,open:true,fee:r}); };
-    const closeGw = () => { clearTimeout(gwTimer.current); setGw(GW0); };
-    const procPay = () => {
-        setG('step','processing');
-        gwTimer.current = setTimeout(() => {
-            const txnId = 'TXN' + Math.random().toString(36).slice(2,11).toUpperCase();
-            setGw(p=>({...p,step:'success',txnId}));
-        }, 2200);
-    };
-    const gwValid = () => {
-        const { method, upiId, cardNum, cardExp, cardCvv, cardName, bank, wallet, walletPhone } = gw;
-        if (method==='upi')        return upiId.includes('@');
-        if (method==='card')       return cardNum.replace(/\s/g,'').length===16 && cardExp.length===5 && cardCvv.length===3 && cardName.trim().length>1;
-        if (method==='netbanking') return !!bank;
-        if (method==='wallet')     return !!wallet && walletPhone.match(/^\d{10}$/);
-        return false;
+    /* Gateway – real Razorpay */
+    const closeGw = () => setGw(GW0);
+    const openGw  = async r => {
+        setGw({ ...GW0, open: true, fee: r, step: 'processing' });
+        try {
+            const { paymentId, orderId, verified } = await openRazorpay({
+                feeId:       r.id,
+                studentId:   r.sid,
+                studentName: r.name,
+                course:      r.course,
+                amount:      r.due,
+            });
+            setGw(p => ({ ...p, step: 'success', txnId: paymentId, orderId: orderId || '', verified: !!verified }));
+        } catch (err) {
+            const msg = err.message || 'Payment failed.';
+            if (msg.includes('cancelled')) {
+                setGw(GW0); // user dismissed – just close silently
+            } else {
+                setGw(p => ({ ...p, step: 'error', errMsg: msg }));
+            }
+        }
     };
 
     /* Notifications */
@@ -680,25 +679,28 @@ export default function Fees() {
             )}
 
             {/* ════════════════════════════════════════
-                PAYMENT GATEWAY MODAL
+                RAZORPAY STATUS MODAL
+                (Razorpay's own checkout UI handles payment method selection)
             ════════════════════════════════════════ */}
             {gw.open && (
-                <div className="modal-backdrop" onClick={gw.step==='processing'||gw.step==='success'?undefined:closeGw}>
+                <div className="modal-backdrop" onClick={gw.step==='processing'?undefined:closeGw}>
                     <div className="gw-modal" onClick={e=>e.stopPropagation()}>
 
+                        {/* Header */}
                         <div style={S.gwHeader}>
                             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                                 <div style={S.gwLogo}><Shield size={16} color="white"/></div>
                                 <div>
-                                    <div style={{ fontWeight:700, fontSize:'0.85rem', color:'white' }}>EduManage Pay</div>
-                                    <div style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.6)' }}>Secured by 256-bit SSL</div>
+                                    <div style={{ fontWeight:700, fontSize:'0.85rem', color:'white' }}>Razorpay Secure Payment</div>
+                                    <div style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.6)' }}>Powered by Razorpay · 256-bit SSL</div>
                                 </div>
                             </div>
-                            {gw.step!=='processing' && gw.step!=='success' && (
+                            {gw.step !== 'processing' && (
                                 <button style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.7)' }} onClick={closeGw}><X size={18}/></button>
                             )}
                         </div>
 
+                        {/* Amount box */}
                         {gw.fee && (
                             <div style={S.gwAmtBox}>
                                 <div style={{ fontSize:'0.72rem', color:'var(--text-muted)', marginBottom:4 }}>Amount to Pay</div>
@@ -707,110 +709,72 @@ export default function Fees() {
                             </div>
                         )}
 
-                        {gw.step==='select' && (
-                            <div style={{ padding:'20px 24px 24px' }}>
-                                <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--text-secondary)', marginBottom:12 }}>Choose Payment Method</div>
-                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                                    {[
-                                        { key:'upi',        label:'UPI',                sub:'GPay, PhonePe, Paytm',   icon:<Smartphone size={22} color="#7c3aed"/> },
-                                        { key:'card',       label:'Debit / Credit Card', sub:'Visa, Mastercard, RuPay', icon:<CreditCard size={22} color="#1e40af"/> },
-                                        { key:'netbanking', label:'Net Banking',         sub:'All major banks',         icon:<Building2  size={22} color="#059669"/> },
-                                        { key:'wallet',     label:'Wallet',              sub:'Paytm, PhonePe & more',  icon:<Wallet    size={22} color="#d97706"/> },
-                                    ].map(m => (
-                                        <button key={m.key}
-                                            style={{ ...S.methodBtn, ...(gw.method===m.key?S.methodBtnActive:{}) }}
-                                            onClick={()=>{ setG('method',m.key); setG('step','details'); }}
-                                        >
-                                            {m.icon}
-                                            <div style={{ fontWeight:600, fontSize:'0.82rem', marginTop:6 }}>{m.label}</div>
-                                            <div style={{ fontSize:'0.68rem', color:'var(--text-muted)', marginTop:2 }}>{m.sub}</div>
-                                        </button>
+                        {/* Processing */}
+                        {gw.step === 'processing' && (
+                            <div style={{ padding:'40px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:18 }}>
+                                <div style={S.gwSpinner}/>
+                                <div style={{ fontWeight:700, fontSize:'0.95rem' }}>Opening Razorpay Checkout…</div>
+                                <div style={{ fontSize:'0.78rem', color:'var(--text-muted)', textAlign:'center' }}>
+                                    Complete your payment in the Razorpay window.<br/>Do not close this tab.
+                                </div>
+                                <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'center', fontSize:'0.7rem', color:'var(--text-muted)' }}>
+                                    {['UPI', 'Card', 'Net Banking', 'Wallet'].map(m=>(
+                                        <span key={m} style={{ background:'#f1f5f9', padding:'3px 9px', borderRadius:6 }}>{m}</span>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {gw.step==='details' && (
-                            <div style={{ padding:'20px 24px 24px', display:'flex', flexDirection:'column', gap:14 }}>
-                                <button style={S.backBtn} onClick={()=>setG('step','select')}>← Back</button>
-
-                                {gw.method==='upi' && (
-                                    <>
-                                        <div style={S.gwLabel}>Enter UPI ID</div>
-                                        <input style={S.gwInput} placeholder="e.g. yourname@upi" value={gw.upiId} onChange={e=>setG('upiId',e.target.value)}/>
-                                        <div style={{ fontSize:'0.72rem', color:'var(--text-muted)', display:'flex', alignItems:'center', gap:5 }}>
-                                            <Smartphone size={12}/> You will receive a payment request on your UPI app.
-                                        </div>
-                                    </>
-                                )}
-
-                                {gw.method==='card' && (
-                                    <>
-                                        <div><div style={S.gwLabel}>Card Number</div><input style={S.gwInput} placeholder="XXXX XXXX XXXX XXXX" value={gw.cardNum} onChange={e=>setG('cardNum',fmtCard(e.target.value))} maxLength={19}/></div>
-                                        <div><div style={S.gwLabel}>Cardholder Name</div><input style={S.gwInput} placeholder="As on card" value={gw.cardName} onChange={e=>setG('cardName',e.target.value)}/></div>
-                                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                                            <div><div style={S.gwLabel}>Expiry (MM/YY)</div><input style={S.gwInput} placeholder="MM/YY" value={gw.cardExp} onChange={e=>setG('cardExp',fmtExp(e.target.value))} maxLength={5}/></div>
-                                            <div><div style={S.gwLabel}>CVV</div><input style={{ ...S.gwInput, letterSpacing:'0.3em' }} placeholder="•••" type="password" value={gw.cardCvv} onChange={e=>setG('cardCvv',e.target.value.replace(/\D/g,'').slice(0,3))} maxLength={3}/></div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {gw.method==='netbanking' && (
-                                    <>
-                                        <div style={S.gwLabel}>Select Your Bank</div>
-                                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                                            {BANKS.map(b=>(
-                                                <button key={b} style={{ ...S.bankBtn, ...(gw.bank===b?S.bankBtnActive:{}) }} onClick={()=>setG('bank',b)}>{b}</button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-
-                                {gw.method==='wallet' && (
-                                    <>
-                                        <div style={S.gwLabel}>Select Wallet</div>
-                                        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                                            {WALLETS.map(w=>(
-                                                <button key={w} style={{ ...S.bankBtn, ...(gw.wallet===w?S.bankBtnActive:{}), padding:'8px 16px' }} onClick={()=>setG('wallet',w)}>{w}</button>
-                                            ))}
-                                        </div>
-                                        <div><div style={S.gwLabel}>Registered Mobile Number</div><input style={S.gwInput} placeholder="10-digit number" value={gw.walletPhone} onChange={e=>setG('walletPhone',e.target.value.replace(/\D/g,'').slice(0,10))}/></div>
-                                    </>
-                                )}
-
-                                <button className="btn btn-primary" style={{ width:'100%', justifyContent:'center', marginTop:4 }} disabled={!gwValid()} onClick={procPay}>
-                                    Pay {gw.fee ? fmt(gw.fee.due) : ''} →
-                                </button>
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, fontSize:'0.68rem', color:'var(--text-muted)' }}>
-                                    <Shield size={11}/> 256-bit SSL encrypted · RBI compliant
-                                </div>
-                            </div>
-                        )}
-
-                        {gw.step==='processing' && (
-                            <div style={{ padding:'40px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:18 }}>
-                                <div style={S.gwSpinner}/>
-                                <div style={{ fontWeight:700, fontSize:'0.95rem' }}>Processing Payment…</div>
-                                <div style={{ fontSize:'0.78rem', color:'var(--text-muted)', textAlign:'center' }}>Connecting to payment gateway.<br/>Please do not close this window.</div>
-                                <div style={{ display:'flex', gap:16, fontSize:'0.72rem', color:'var(--text-muted)' }}>
-                                    <span>✓ Authenticated</span><span>✓ Authorized</span><span style={{ color:'var(--primary)' }}>⟳ Settling…</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {gw.step==='success' && (
+                        {/* Success */}
+                        {gw.step === 'success' && (
                             <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
                                 <div style={S.gwSuccessIcon}><CheckCircle size={40} color="white"/></div>
                                 <div style={{ fontWeight:700, fontSize:'1.1rem', color:'var(--text-primary)' }}>Payment Successful!</div>
-                                <div style={{ fontSize:'0.82rem', color:'var(--text-muted)' }}>Fee paid for {gw.fee?.name}</div>
+                                <div style={{ fontSize:'0.82rem', color:'var(--text-muted)' }}>Fee paid for <strong>{gw.fee?.name}</strong></div>
+
+                                {/* Signature verification badge */}
+                                <div style={{
+                                    display:'inline-flex', alignItems:'center', gap:6,
+                                    padding:'5px 12px', borderRadius:99, fontSize:'0.72rem', fontWeight:700,
+                                    background: gw.verified ? 'rgba(5,150,105,0.1)' : 'rgba(245,158,11,0.1)',
+                                    color:      gw.verified ? '#059669'              : '#b45309',
+                                    border:     `1px solid ${gw.verified ? 'rgba(5,150,105,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                                }}>
+                                    {gw.verified
+                                        ? <><CheckCircle size={12}/> Signature Verified</>
+                                        : <><Shield size={12}/> Unverified (backend offline)</>
+                                    }
+                                </div>
+
                                 <div style={S.txnBox}>
-                                    <div style={{ fontSize:'0.65rem', color:'var(--text-muted)', marginBottom:4 }}>Transaction ID</div>
-                                    <div style={{ fontFamily:'monospace', fontWeight:800, fontSize:'1rem', color:'var(--primary)', letterSpacing:'0.08em' }}>{gw.txnId}</div>
-                                    <div style={{ fontSize:'0.65rem', color:'var(--text-muted)', marginTop:4 }}>{nowStr()}</div>
+                                    <div style={{ fontSize:'0.65rem', color:'var(--text-muted)', marginBottom:4 }}>Razorpay Payment ID</div>
+                                    <div style={{ fontFamily:'monospace', fontWeight:800, fontSize:'0.9rem', color:'var(--primary)', letterSpacing:'0.06em', wordBreak:'break-all' }}>{gw.txnId}</div>
+                                    {gw.orderId && (
+                                        <>
+                                            <div style={{ fontSize:'0.65rem', color:'var(--text-muted)', marginTop:8, marginBottom:4 }}>Order ID</div>
+                                            <div style={{ fontFamily:'monospace', fontSize:'0.75rem', color:'var(--text-secondary)', wordBreak:'break-all' }}>{gw.orderId}</div>
+                                        </>
+                                    )}
+                                    <div style={{ fontSize:'0.65rem', color:'var(--text-muted)', marginTop:6 }}>{nowStr()}</div>
                                 </div>
                                 <div style={{ display:'flex', gap:10, marginTop:4, flexWrap:'wrap', justifyContent:'center' }}>
                                     <button className="btn btn-secondary btn-sm"><Download size={12}/> Download Receipt</button>
                                     <button className="btn btn-primary btn-sm" onClick={closeGw}>Done</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Error */}
+                        {gw.step === 'error' && (
+                            <div style={{ padding:'32px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+                                <div style={{ width:72, height:72, borderRadius:'50%', background:'#dc2626', display:'grid', placeItems:'center', boxShadow:'0 4px 20px rgba(220,38,38,0.35)' }}>
+                                    <AlertTriangle size={36} color="white"/>
+                                </div>
+                                <div style={{ fontWeight:700, fontSize:'1rem', color:'var(--text-primary)' }}>Payment Failed</div>
+                                <div style={{ fontSize:'0.82rem', color:'var(--text-muted)', textAlign:'center' }}>{gw.errMsg}</div>
+                                <div style={{ display:'flex', gap:10, marginTop:4 }}>
+                                    <button className="btn btn-secondary btn-sm" onClick={closeGw}>Cancel</button>
+                                    <button className="btn btn-primary btn-sm" onClick={()=>openGw(gw.fee)}>Try Again</button>
                                 </div>
                             </div>
                         )}
@@ -956,14 +920,7 @@ const S = {
     gwHeader:       { background:'linear-gradient(135deg,#1e3a8a,#1e40af)', padding:'14px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' },
     gwLogo:         { width:32, height:32, borderRadius:8, background:'rgba(255,255,255,0.15)', display:'grid', placeItems:'center' },
     gwAmtBox:       { padding:'18px 24px 6px', textAlign:'center', borderBottom:'1px solid var(--border)' },
-    gwLabel:        { fontSize:'0.75rem', fontWeight:600, color:'var(--text-secondary)', marginBottom:6 },
-    gwInput:        { width:'100%', padding:'10px 13px', border:'1.5px solid var(--border)', borderRadius:'var(--radius-sm)', fontSize:'0.9rem', outline:'none', color:'var(--text-primary)' },
-    methodBtn:      { display:'flex', flexDirection:'column', alignItems:'center', padding:'16px 10px', border:'1.5px solid var(--border)', borderRadius:'var(--radius-sm)', background:'white', cursor:'pointer', transition:'all 0.15s', textAlign:'center' },
-    methodBtnActive:{ borderColor:'var(--primary)', background:'#eff6ff' },
-    bankBtn:        { padding:'8px 12px', border:'1.5px solid var(--border)', borderRadius:'var(--radius-sm)', background:'white', cursor:'pointer', fontSize:'0.75rem', fontWeight:500, color:'var(--text-secondary)', transition:'all 0.15s', textAlign:'left' },
-    bankBtnActive:  { borderColor:'var(--primary)', color:'var(--primary)', background:'#eff6ff', fontWeight:600 },
-    backBtn:        { background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', fontSize:'0.78rem', padding:0, alignSelf:'flex-start', fontWeight:500 },
-    gwSpinner:      { width:48, height:48, borderRadius:'50%', border:'4px solid #e2e8f0', borderTopColor:'var(--primary)', animation:'gwSpin 0.7s linear infinite' },
+gwSpinner:      { width:48, height:48, borderRadius:'50%', border:'4px solid #e2e8f0', borderTopColor:'var(--primary)', animation:'gwSpin 0.7s linear infinite' },
     gwSuccessIcon:  { width:72, height:72, borderRadius:'50%', background:'#059669', display:'grid', placeItems:'center', animation:'gwPop 0.35s ease-out', boxShadow:'0 4px 20px rgba(5,150,105,0.35)' },
     txnBox:         { background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:'var(--radius-sm)', padding:'12px 24px', textAlign:'center' },
 };
