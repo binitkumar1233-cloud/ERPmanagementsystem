@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -67,8 +67,18 @@ export default function StudentDashboard() {
     const toast = useToast();
     const [activeTab, setActiveTab] = useState('marks');
     const [showNotif, setShowNotif] = useState(false);
+    const [notifPos, setNotifPos] = useState({ top: 0, right: 0 });
+    const bellRef = useRef(null);
     const [modal, setModal] = useState(null); // 'timetable' | 'exams' | 'results' | 'fees'
     const [payingFee, setPayingFee] = useState(false);
+
+    const handleBellClick = useCallback(() => {
+        if (bellRef.current) {
+            const r = bellRef.current.getBoundingClientRect();
+            setNotifPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
+        }
+        setShowNotif(v => !v);
+    }, []);
 
     const name   = user?.name  || 'Student';
     const id     = user?.id    || 'STU101';
@@ -163,31 +173,13 @@ export default function StudentDashboard() {
                     </div>
 
                     {/* Actions */}
-                    <div style={{ ...S.heroActions, position: 'relative' }}>
-                        <button style={{ ...S.heroNotifBtn, position: 'relative' }} onClick={() => setShowNotif(v => !v)}>
+                    <div style={S.heroActions}>
+                        <button ref={bellRef} style={{ ...S.heroNotifBtn, position: 'relative' }} onClick={handleBellClick}>
                             <Bell size={16} color="rgba(255,255,255,0.8)" />
                             {NOTIFICATIONS.some(n => n.unread) && (
                                 <span style={S.notifBadgeDot} />
                             )}
                         </button>
-                        {showNotif && (
-                            <div style={S.notifDropdown}>
-                                <div style={S.notifDropHeader}>
-                                    <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Notifications</span>
-                                    <button style={S.notifDropClose} onClick={() => setShowNotif(false)}><X size={13} /></button>
-                                </div>
-                                {NOTIFICATIONS.map((n, i) => (
-                                    <div key={i} style={{ ...S.notifRow, background: n.unread ? 'rgba(37,99,235,0.04)' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
-                                        <div style={{ ...S.notifIcon, background: n.bg, color: n.color }}><n.icon size={13} /></div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ ...S.notifText, fontWeight: n.unread ? 600 : 400 }}>{n.text}</div>
-                                            <div style={S.notifTime}><Clock size={9} /> {n.time}</div>
-                                        </div>
-                                        {n.unread && <div style={S.unreadDot} />}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                         <button style={S.heroLogoutBtn} onClick={logout}><LogOut size={14} /> Logout</button>
                     </div>
                 </div>
@@ -462,6 +454,29 @@ export default function StudentDashboard() {
                 </div>
             </div>
 
+            {/* ── Notification dropdown (fixed, anchored to bell button) ── */}
+            {showNotif && (
+                <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 1099 }} onClick={() => setShowNotif(false)} />
+                    <div style={{ ...S.notifDropdown, position: 'fixed', top: notifPos.top, right: notifPos.right, zIndex: 1100 }}>
+                        <div style={S.notifDropHeader}>
+                            <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Notifications</span>
+                            <button style={S.notifDropClose} onClick={() => setShowNotif(false)}><X size={13} /></button>
+                        </div>
+                        {NOTIFICATIONS.map((n, i) => (
+                            <div key={i} style={{ ...S.notifRow, background: n.unread ? 'rgba(37,99,235,0.04)' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
+                                <div style={{ ...S.notifIcon, background: n.bg, color: n.color }}><n.icon size={13} /></div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ ...S.notifText, fontWeight: n.unread ? 600 : 400 }}>{n.text}</div>
+                                    <div style={S.notifTime}><Clock size={9} /> {n.time}</div>
+                                </div>
+                                {n.unread && <div style={S.unreadDot} />}
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
+
             {/* ── MODALS ── */}
             {modal && (
                 <div style={S.overlay} onClick={() => setModal(null)}>
@@ -729,7 +744,7 @@ const S = {
 
     /* Notification dropdown */
     notifBadgeDot: { position: 'absolute', top: 5, right: 5, width: 8, height: 8, borderRadius: '50%', background: '#dc2626', border: '2px solid rgba(255,255,255,0.3)' },
-    notifDropdown: { position: 'absolute', top: 44, right: 0, width: 300, background: 'white', borderRadius: 14, boxShadow: '0 12px 40px rgba(0,0,0,0.18)', zIndex: 2000, overflow: 'hidden', border: '1px solid #e2e8f0' },
+    notifDropdown: { width: 300, background: 'white', borderRadius: 14, boxShadow: '0 12px 40px rgba(0,0,0,0.18)', overflow: 'hidden', border: '1px solid #e2e8f0' },
     notifDropHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #f1f5f9' },
     notifDropClose: { width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' },
 
