@@ -6,6 +6,9 @@ import { db } from '../../config/firebase.js';
 import { logAuditEvent, AUDIT_ACTIONS } from '../../utils/auditLog.js';
 import Navbar from '../../components/layout/Navbar.jsx';
 import ExportMenu from '../../components/common/ExportMenu.jsx';
+import { SkeletonTable } from '../../components/common/Skeleton.jsx';
+import EmptyState from '../../components/common/EmptyState.jsx';
+import { useToast } from '../../context/ToastContext.jsx';
 import {
     Plus, Search, Eye, Edit2, Trash2,
     ChevronLeft, ChevronRight, LayoutGrid, LayoutList,
@@ -76,15 +79,24 @@ export default function Students() {
     const [loading, setLoading] = useState(true);
     const [viewStudent, setViewStudent] = useState(null);
     const [deleting, setDeleting] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const toast = useToast();
 
-    const handleDelete = async (s) => {
-        if (!window.confirm(`Delete ${s.name}? This cannot be undone.`)) return;
+    const confirmDelete = async () => {
+        const s = deleteTarget;
+        setDeleteTarget(null);
         setDeleting(s.id);
-        try { await api.delete('/students/' + s.id); } catch { /* backend unavailable */ }
-        try { await deleteDoc(doc(db, 'students', s.id)); } catch { /* not in Firestore */ }
-        logAuditEvent(AUDIT_ACTIONS.STUDENT_DELETE, { id: s.id, name: s.name, email: s.email });
-        setData(prev => prev.filter(x => x.id !== s.id));
-        setDeleting(null);
+        try {
+            try { await api.delete('/students/' + s.id); } catch { /* backend unavailable */ }
+            try { await deleteDoc(doc(db, 'students', s.id)); } catch { /* not in Firestore */ }
+            logAuditEvent(AUDIT_ACTIONS.STUDENT_DELETE, { id: s.id, name: s.name, email: s.email });
+            setData(prev => prev.filter(x => x.id !== s.id));
+            toast.success(`${s.name} deleted successfully.`);
+        } catch {
+            toast.error('Failed to delete student. Please try again.');
+        } finally {
+            setDeleting(null);
+        }
     };
 
     useEffect(() => {
@@ -109,7 +121,12 @@ export default function Students() {
         else { setSortKey(key); setSortAsc(true); }
     };
 
-    if (loading) return <div className="erp-page"><Navbar title="Students" subtitle="Manage all student records" /><div className="empty-state"><p>Loading students…</p></div></div>;
+    if (loading) return (
+        <div className="erp-page">
+            <Navbar title="Students" subtitle="Manage all student records" />
+            <SkeletonTable rows={6} cols={7} />
+        </div>
+    );
 
     const filtered = data
         .filter(s => {
@@ -294,7 +311,7 @@ export default function Students() {
                                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                                                 <button className="tbl-btn" title="View"   onClick={() => setViewStudent(s)}><Eye   size={13} /></button>
                                                 <button className="tbl-btn" title="Edit"   onClick={() => setViewStudent(s)}><Edit2 size={13} /></button>
-                                                <button className="tbl-btn danger" title="Delete" disabled={deleting === s.id} onClick={() => handleDelete(s)}><Trash2 size={13} /></button>
+                                                <button className="tbl-btn danger" title="Delete" disabled={deleting === s.id} onClick={() => setDeleteTarget(s)}><Trash2 size={13} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -363,7 +380,7 @@ export default function Students() {
                                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
                                         <button className="tbl-btn" title="View"   onClick={() => setViewStudent(s)}><Eye   size={12} /></button>
                                         <button className="tbl-btn" title="Edit"   onClick={() => setViewStudent(s)}><Edit2 size={12} /></button>
-                                        <button className="tbl-btn danger" title="Delete" disabled={deleting === s.id} onClick={() => handleDelete(s)}><Trash2 size={12} /></button>
+                                        <button className="tbl-btn danger" title="Delete" disabled={deleting === s.id} onClick={() => setDeleteTarget(s)}><Trash2 size={12} /></button>
                                     </div>
                                 </div>
                             </div>
@@ -431,6 +448,23 @@ export default function Students() {
                                     <span style={S.modalValue}>{value}</span>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Delete Confirmation Modal ── */}
+            {deleteTarget && (
+                <div style={S.overlay} onClick={() => setDeleteTarget(null)}>
+                    <div style={S.confirmBox} onClick={e => e.stopPropagation()}>
+                        <div style={S.confirmIcon}><Trash2 size={22} color="#dc2626" /></div>
+                        <div style={S.confirmTitle}>Delete Student?</div>
+                        <div style={S.confirmMsg}>
+                            <strong>{deleteTarget.name}</strong> will be permanently removed. This cannot be undone.
+                        </div>
+                        <div style={S.confirmBtns}>
+                            <button style={S.confirmCancel} onClick={() => setDeleteTarget(null)}>Cancel</button>
+                            <button style={S.confirmDel} onClick={confirmDelete}>Yes, Delete</button>
                         </div>
                     </div>
                 </div>
@@ -507,4 +541,14 @@ const S = {
     modalLabel:   { color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 },
     modalValue:   { color: 'var(--text-primary)', textAlign: 'right', wordBreak: 'break-all' },
     modalClose:   { width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-muted)', display: 'grid', placeItems: 'center' },
+
+    /* Delete confirm */
+    overlay:       { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1100 },
+    confirmBox:    { background: 'white', borderRadius: 16, padding: '28px 28px 24px', width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
+    confirmIcon:   { width: 52, height: 52, borderRadius: 14, background: '#fef2f2', display: 'grid', placeItems: 'center', marginBottom: 4 },
+    confirmTitle:  { fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' },
+    confirmMsg:    { fontSize: '0.83rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 },
+    confirmBtns:   { display: 'flex', gap: 10, marginTop: 6, width: '100%' },
+    confirmCancel: { flex: 1, padding: '9px 0', borderRadius: 9, border: '1px solid #e2e8f0', background: '#f8fafc', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' },
+    confirmDel:    { flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', background: '#dc2626', color: 'white', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' },
 };
