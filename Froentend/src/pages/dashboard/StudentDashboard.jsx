@@ -1,12 +1,14 @@
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext.jsx';
+import { useToast } from '../../context/ToastContext.jsx';
+import { openRazorpay } from '../../utils/razorpay.js';
 import {
     BookOpen, CheckCircle2, Wallet, User, BarChart2,
     LogOut, Bell, Download, Calendar, Clock, Award,
     TrendingUp, CreditCard, FileText, ChevronRight,
     MapPin, Phone, Mail, Shield, ArrowUpRight, Star,
-    BookMarked, Activity, AlertCircle, CheckCircle,
+    BookMarked, Activity, AlertCircle, CheckCircle, X,
 } from 'lucide-react';
 
 /* ── Mock data ── */
@@ -56,21 +58,17 @@ const CGPA_TREND = [
     { sem: 'IV',  cgpa: 7.9 },
 ];
 
-const QUICK_ACTIONS = [
-    { label: 'Pay Fees',          icon: CreditCard,  color: '#2563eb', bg: 'rgba(37,99,235,0.10)',  action: '/fees'                 },
-    { label: 'Download Marksheet',icon: Download,    color: '#059669', bg: 'rgba(5,150,105,0.10)',  action: null                    },
-    { label: 'View Timetable',    icon: Calendar,    color: '#7c3aed', bg: 'rgba(124,58,237,0.10)', action: null                    },
-    { label: 'My Profile',        icon: User,        color: '#d97706', bg: 'rgba(217,119,6,0.10)',  action: '/student-information'  },
-    { label: 'Exam Schedule',     icon: BookMarked,  color: '#0284c7', bg: 'rgba(2,132,199,0.10)',  action: '/exam-management'      },
-    { label: 'Result History',    icon: BarChart2,   color: '#dc2626', bg: 'rgba(220,38,38,0.10)',  action: '/results'              },
-];
 
 const gradeColor = g => ({ O: '#059669', 'A+': '#2563eb', A: '#2563eb', 'B+': '#7c3aed', B: '#d97706', C: '#f59e0b', F: '#dc2626' }[g] || '#64748b');
 
 export default function StudentDashboard() {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
+    const toast = useToast();
     const [activeTab, setActiveTab] = useState('marks');
+    const [showNotif, setShowNotif] = useState(false);
+    const [modal, setModal] = useState(null); // 'timetable' | 'exams' | 'results' | 'fees'
+    const [payingFee, setPayingFee] = useState(false);
 
     const name   = user?.name  || 'Student';
     const id     = user?.id    || 'STU101';
@@ -83,6 +81,49 @@ export default function StudentDashboard() {
     const totalFees = FEE_SCHEDULE.reduce((s, f) => s + f.amount, 0);
     const paidFees  = FEE_SCHEDULE.filter(f => f.paid).reduce((s, f) => s + f.amount, 0);
     const dueFees   = totalFees - paidFees;
+
+    const downloadMarksheet = () => {
+        const header = 'Subject,Marks,Max Marks,Grade,Attendance\n';
+        const rows = SUBJECTS.map(s => `${s.name},${s.marks},${s.max},${s.grade},${s.attendance}%`).join('\n');
+        const blob = new Blob([header + rows], { type: 'text/csv' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = `Marksheet_${name.replace(/\s+/g, '_')}_Sem4.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Marksheet downloaded!');
+    };
+
+    const handlePayFees = async () => {
+        setPayingFee(true);
+        try {
+            const result = await openRazorpay({
+                amount:      dueFees,
+                studentName: name,
+                email:       user?.email || '',
+                phone:       user?.phone || '',
+                course,
+                studentId:   id,
+                feeId:       `sem4_${id}`,
+            });
+            toast.success(`Payment successful! ID: ${result.paymentId}`);
+            setModal(null);
+        } catch (err) {
+            if (!err.message?.includes('cancelled')) toast.error(err.message || 'Payment failed.');
+        } finally {
+            setPayingFee(false);
+        }
+    };
+
+    const QUICK_ACTIONS = [
+        { label: 'Pay Fees',           icon: CreditCard, color: '#2563eb', bg: 'rgba(37,99,235,0.10)', action: () => setModal('fees')        },
+        { label: 'Download Marksheet', icon: Download,   color: '#059669', bg: 'rgba(5,150,105,0.10)', action: downloadMarksheet             },
+        { label: 'View Timetable',     icon: Calendar,   color: '#7c3aed', bg: 'rgba(124,58,237,0.10)',action: () => setModal('timetable')   },
+        { label: 'My Profile',         icon: User,       color: '#d97706', bg: 'rgba(217,119,6,0.10)', action: () => navigate('/student-information') },
+        { label: 'Exam Schedule',      icon: BookMarked, color: '#0284c7', bg: 'rgba(2,132,199,0.10)', action: () => setModal('exams')       },
+        { label: 'Result History',     icon: BarChart2,  color: '#dc2626', bg: 'rgba(220,38,38,0.10)', action: () => setModal('results')     },
+    ];
 
     return (
         <div className="erp-page" style={{ padding: 0 }}>
@@ -122,8 +163,31 @@ export default function StudentDashboard() {
                     </div>
 
                     {/* Actions */}
-                    <div style={S.heroActions}>
-                        <button style={S.heroNotifBtn}><Bell size={16} color="rgba(255,255,255,0.8)" /></button>
+                    <div style={{ ...S.heroActions, position: 'relative' }}>
+                        <button style={{ ...S.heroNotifBtn, position: 'relative' }} onClick={() => setShowNotif(v => !v)}>
+                            <Bell size={16} color="rgba(255,255,255,0.8)" />
+                            {NOTIFICATIONS.some(n => n.unread) && (
+                                <span style={S.notifBadgeDot} />
+                            )}
+                        </button>
+                        {showNotif && (
+                            <div style={S.notifDropdown}>
+                                <div style={S.notifDropHeader}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Notifications</span>
+                                    <button style={S.notifDropClose} onClick={() => setShowNotif(false)}><X size={13} /></button>
+                                </div>
+                                {NOTIFICATIONS.map((n, i) => (
+                                    <div key={i} style={{ ...S.notifRow, background: n.unread ? 'rgba(37,99,235,0.04)' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
+                                        <div style={{ ...S.notifIcon, background: n.bg, color: n.color }}><n.icon size={13} /></div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ ...S.notifText, fontWeight: n.unread ? 600 : 400 }}>{n.text}</div>
+                                            <div style={S.notifTime}><Clock size={9} /> {n.time}</div>
+                                        </div>
+                                        {n.unread && <div style={S.unreadDot} />}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <button style={S.heroLogoutBtn} onClick={logout}><LogOut size={14} /> Logout</button>
                     </div>
                 </div>
@@ -385,7 +449,7 @@ export default function StudentDashboard() {
                                 <button
                                     key={a.label}
                                     style={{ ...S.qaBtn, background: a.bg }}
-                                    onClick={() => a.action && navigate(a.action)}
+                                    onClick={() => a.action && a.action()}
                                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 6px 18px ${a.bg}`; }}
                                     onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';    e.currentTarget.style.boxShadow = 'none'; }}
                                 >
@@ -397,6 +461,146 @@ export default function StudentDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* ── MODALS ── */}
+            {modal && (
+                <div style={S.overlay} onClick={() => setModal(null)}>
+                    <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+
+                        {/* Timetable modal */}
+                        {modal === 'timetable' && (
+                            <>
+                                <div style={S.modalHead}>
+                                    <Calendar size={16} color="#7c3aed" />
+                                    <span style={S.modalTitle}>Weekly Timetable</span>
+                                    <button style={S.modalClose} onClick={() => setModal(null)}><X size={14} /></button>
+                                </div>
+                                <div style={S.modalBody}>
+                                    {[
+                                        { day: 'Monday',    slots: ['Data Structures (A-201)', 'Mathematics III (B-105)', 'Database Management (Lab-1)'] },
+                                        { day: 'Tuesday',   slots: ['Computer Networks (B-201)', 'Operating Systems (A-301)', 'Software Engineering (C-105)'] },
+                                        { day: 'Wednesday', slots: ['Mathematics III (B-105)', 'Data Structures Lab (Lab-2)', 'Computer Networks (B-201)'] },
+                                        { day: 'Thursday',  slots: ['Database Management (Lab-1)', 'Software Engineering (C-105)', 'OS Tutorial (A-105)'] },
+                                        { day: 'Friday',    slots: ['Data Structures (A-201)', 'Mathematics III (B-105)', 'Computer Networks Lab (Lab-3)', 'OS Tutorial (A-105)'] },
+                                    ].map(row => (
+                                        <div key={row.day} style={{ marginBottom: 14 }}>
+                                            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{row.day}</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                {row.slots.map(slot => (
+                                                    <span key={slot} style={{ padding: '4px 10px', background: 'rgba(124,58,237,0.07)', color: '#4c1d95', borderRadius: 6, fontSize: '0.74rem', fontWeight: 500 }}>{slot}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        {/* Exams modal */}
+                        {modal === 'exams' && (
+                            <>
+                                <div style={S.modalHead}>
+                                    <BookMarked size={16} color="#0284c7" />
+                                    <span style={S.modalTitle}>Upcoming Exam Schedule</span>
+                                    <button style={S.modalClose} onClick={() => setModal(null)}><X size={14} /></button>
+                                </div>
+                                <div style={S.modalBody}>
+                                    {[
+                                        ...EXAMS,
+                                        { subject: 'Software Engineering', date: 'Jun 19', type: 'Mid-Sem',   color: '#2563eb' },
+                                        { subject: 'Database Management',  date: 'Jun 21', type: 'Practical', color: '#059669' },
+                                    ].map(ex => (
+                                        <div key={ex.subject} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 14px', borderRadius: 10, background: `${ex.color}09`, borderLeft: `3px solid ${ex.color}`, marginBottom: 6 }}>
+                                            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: ex.color, minWidth: 46 }}>{ex.date}</div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{ex.subject}</div>
+                                                <div style={{ fontSize: '0.68rem', fontWeight: 600, color: ex.color, marginTop: 2 }}>{ex.type}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        {/* Results modal */}
+                        {modal === 'results' && (
+                            <>
+                                <div style={S.modalHead}>
+                                    <BarChart2 size={16} color="#dc2626" />
+                                    <span style={S.modalTitle}>Result History</span>
+                                    <button style={S.modalClose} onClick={() => setModal(null)}><X size={14} /></button>
+                                </div>
+                                <div style={S.modalBody}>
+                                    {CGPA_TREND.map(sem => (
+                                        <div key={sem.sem} style={{ marginBottom: 18 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                                <span style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-primary)' }}>Semester {sem.sem}</span>
+                                                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2563eb' }}>CGPA {sem.cgpa}</span>
+                                            </div>
+                                            <div style={{ height: 6, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', width: `${(sem.cgpa / 10) * 100}%`, background: sem.cgpa >= 7.7 ? 'linear-gradient(90deg,#1e40af,#3b82f6)' : 'linear-gradient(90deg,#5b21b6,#8b5cf6)', borderRadius: 99 }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 12, marginTop: 4 }}>
+                                        <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Current Semester — Subject Marks</div>
+                                        {SUBJECTS.map(s => (
+                                            <div key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f8fafc', fontSize: '0.78rem' }}>
+                                                <span style={{ color: 'var(--text-secondary)' }}>{s.name}</span>
+                                                <span style={{ fontWeight: 700, color: s.color }}>{s.marks}/{s.max} &nbsp;<span style={{ background: `${gradeColor(s.grade)}15`, color: gradeColor(s.grade), padding: '1px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 800 }}>{s.grade}</span></span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Fees modal */}
+                        {modal === 'fees' && (
+                            <>
+                                <div style={S.modalHead}>
+                                    <CreditCard size={16} color="#2563eb" />
+                                    <span style={S.modalTitle}>Fee Payment — Sem IV</span>
+                                    <button style={S.modalClose} onClick={() => setModal(null)}><X size={14} /></button>
+                                </div>
+                                <div style={S.modalBody}>
+                                    <div style={{ height: 7, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
+                                        <div style={{ height: '100%', width: `${(paidFees / totalFees) * 100}%`, background: 'linear-gradient(90deg,#059669,#10b981)', borderRadius: 99 }} />
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', marginBottom: 14 }}>
+                                        <span style={{ color: '#059669', fontWeight: 700 }}>₹{paidFees.toLocaleString()} paid</span>
+                                        <span style={{ color: 'var(--text-muted)' }}>of ₹{totalFees.toLocaleString()}</span>
+                                    </div>
+                                    {FEE_SCHEDULE.map(f => (
+                                        <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid #f8fafc' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div style={{ width: 7, height: 7, borderRadius: '50%', background: f.paid ? '#059669' : '#dc2626', flexShrink: 0 }} />
+                                                <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{f.label}</span>
+                                            </div>
+                                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>₹{f.amount.toLocaleString()}</span>
+                                            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: f.paid ? '#059669' : '#dc2626' }}>{f.date}</span>
+                                        </div>
+                                    ))}
+                                    {dueFees > 0 ? (
+                                        <button
+                                            style={{ ...S.payNowBtn, borderRadius: 10, marginTop: 16, opacity: payingFee ? 0.7 : 1 }}
+                                            onClick={handlePayFees}
+                                            disabled={payingFee}
+                                        >
+                                            <CreditCard size={15} /> {payingFee ? 'Processing…' : `Pay Now — ₹${dueFees.toLocaleString()}`}
+                                        </button>
+                                    ) : (
+                                        <div style={{ textAlign: 'center', padding: '16px 0', color: '#059669', fontWeight: 700, fontSize: '0.84rem' }}>
+                                            ✓ All fees paid for this semester
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -522,4 +726,18 @@ const S = {
     qaBtn: { border: 'none', borderRadius: 10, padding: '11px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' },
     qaIcon: { width: 34, height: 34, borderRadius: 9, display: 'grid', placeItems: 'center' },
     qaLabel: { fontSize: '0.65rem', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 },
+
+    /* Notification dropdown */
+    notifBadgeDot: { position: 'absolute', top: 5, right: 5, width: 8, height: 8, borderRadius: '50%', background: '#dc2626', border: '2px solid rgba(255,255,255,0.3)' },
+    notifDropdown: { position: 'absolute', top: 44, right: 0, width: 300, background: 'white', borderRadius: 14, boxShadow: '0 12px 40px rgba(0,0,0,0.18)', zIndex: 2000, overflow: 'hidden', border: '1px solid #e2e8f0' },
+    notifDropHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #f1f5f9' },
+    notifDropClose: { width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' },
+
+    /* Modal */
+    overlay: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1100, padding: 16 },
+    modalBox: { background: 'white', borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' },
+    modalHead: { display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px 12px', borderBottom: '1px solid #f1f5f9' },
+    modalTitle: { flex: 1, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)' },
+    modalClose: { width: 30, height: 30, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' },
+    modalBody: { padding: '16px 20px 20px', maxHeight: '65vh', overflowY: 'auto' },
 };
