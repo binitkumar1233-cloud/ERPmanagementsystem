@@ -5,6 +5,7 @@ import { SocketProvider } from './context/SocketContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import PageProgress from './components/common/PageProgress.jsx';
+import ChatBot from './components/common/ChatBot.jsx';
 import AppRoutes from './routes/AppRoutes';
 import './assets/styles/global.css';
 
@@ -18,6 +19,7 @@ export default function App() {
                         <AuthProvider>
                             <SocketProvider>
                                 <AppRoutes />
+                                <ChatBot />
                             </SocketProvider>
                         </AuthProvider>
                     </ToastProvider>
