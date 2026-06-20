@@ -213,7 +213,7 @@ export default function ChatBot() {
 const S = {
     /* FAB */
     fab: {
-        position: 'fixed', bottom: 24, left: 24,
+        position: 'fixed', bottom: 24, right: 90,
         width: 54, height: 54, borderRadius: '50%',
         background: 'linear-gradient(135deg, #1e3a8a, #2563eb)',
         border: 'none', cursor: 'pointer',
@@ -232,7 +232,7 @@ const S = {
 
     /* Window */
     window: {
-        position: 'fixed', bottom: 90, left: 24,
+        position: 'fixed', bottom: 90, right: 24,
         width: 370, height: 510,
         background: 'white', borderRadius: 18,
         boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
