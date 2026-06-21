@@ -74,6 +74,7 @@ export default function StudentDashboard() {
     const [payingFee, setPayingFee] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearchResults, setShowSearchResults] = useState(false);
+    const [searchDropPos, setSearchDropPos] = useState({ top: 0, left: 0, width: 560 });
     const searchRef = useRef(null);
 
     useEffect(() => {
@@ -241,58 +242,40 @@ export default function StudentDashboard() {
                         <button style={S.heroLogoutBtn} onClick={logout}><LogOut size={14} /> Logout</button>
                     </div>
                 </div>
-                {/* ── Search Bar (inside hero) ── */}
-                <div style={S.heroSearchRow}>
-                    <div ref={searchRef} style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
-                        <div style={S.heroSearchBox}>
-                            <Search size={15} color={searchQuery ? '#93c5fd' : 'rgba(255,255,255,0.45)'} style={{ flexShrink: 0 }} />
-                            <input
-                                style={S.heroSearchInput}
-                                placeholder="Search subjects, exams, fees, schedule…"
-                                value={searchQuery}
-                                onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
-                                onFocus={() => { if (searchQuery) setShowSearchResults(true); }}
-                            />
-                            {searchQuery && (
-                                <button style={S.heroSearchClear} onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}>
-                                    <X size={12} />
-                                </button>
-                            )}
-                        </div>
+                <div style={S.heroDate}>{today}</div>
+            </div>
 
-                        {showSearchResults && searchQuery && (
-                            <div style={S.searchDropdown}>
-                                {searchResults.length === 0 ? (
-                                    <div style={S.searchEmpty}>
-                                        <Search size={18} color="#cbd5e1" />
-                                        <span>No results for <strong>"{searchQuery}"</strong></span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div style={S.searchResultCount}>{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</div>
-                                        {searchResults.map((r, i) => (
-                                            <button key={i} style={S.searchResultItem} onClick={r.action}
-                                                onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                            >
-                                                <div style={{ ...S.searchResultIcon, background: `${r.color}15`, color: r.color }}>
-                                                    <r.Icon size={13} />
-                                                </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={S.searchResultLabel}>{r.label}</div>
-                                                    <div style={S.searchResultSub}>{r.sub}</div>
-                                                </div>
-                                                <span style={{ ...S.searchResultBadge, background: `${r.color}12`, color: r.color }}>{r.type}</span>
-                                            </button>
-                                        ))}
-                                    </>
-                                )}
-                            </div>
-                        )}
+            {/* ── Search Bar (between hero and grid) ── */}
+            <div style={S.searchStrip}>
+                <div ref={searchRef} style={S.searchInner}>
+                    <div style={S.searchBox}>
+                        <Search size={15} color={searchQuery ? '#2563eb' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                        <input
+                            style={S.searchInput}
+                            placeholder="Search subjects, exams, fees, timetable, actions…"
+                            value={searchQuery}
+                            onChange={e => {
+                                setSearchQuery(e.target.value);
+                                setShowSearchResults(true);
+                                if (searchRef.current) {
+                                    const r = searchRef.current.getBoundingClientRect();
+                                    setSearchDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                                }
+                            }}
+                            onFocus={() => {
+                                if (searchQuery && searchRef.current) {
+                                    const r = searchRef.current.getBoundingClientRect();
+                                    setSearchDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+                                    setShowSearchResults(true);
+                                }
+                            }}
+                        />
+                        {searchQuery
+                            ? <button style={S.searchClear} onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}><X size={13} /></button>
+                            : <span style={S.searchHint}>⌘K</span>
+                        }
                     </div>
                 </div>
-
-                <div style={S.heroDate}>{today}</div>
             </div>
 
             {/* ── Main 3-col Grid ── */}
@@ -563,6 +546,40 @@ export default function StudentDashboard() {
                 </div>
             </div>
 
+            {/* ── Search results dropdown (fixed, avoids overflow clipping) ── */}
+            {showSearchResults && searchQuery && (
+                <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 499 }} onClick={() => setShowSearchResults(false)} />
+                    <div style={{ ...S.searchDropdown, position: 'fixed', top: searchDropPos.top, left: searchDropPos.left, width: searchDropPos.width, zIndex: 500 }}>
+                        {searchResults.length === 0 ? (
+                            <div style={S.searchEmpty}>
+                                <Search size={18} color="#cbd5e1" />
+                                <span>No results for <strong>"{searchQuery}"</strong></span>
+                            </div>
+                        ) : (
+                            <>
+                                <div style={S.searchResultCount}>{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</div>
+                                {searchResults.map((r, i) => (
+                                    <button key={i} style={S.searchResultItem} onClick={r.action}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <div style={{ ...S.searchResultIcon, background: `${r.color}15`, color: r.color }}>
+                                            <r.Icon size={13} />
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={S.searchResultLabel}>{r.label}</div>
+                                            <div style={S.searchResultSub}>{r.sub}</div>
+                                        </div>
+                                        <span style={{ ...S.searchResultBadge, background: `${r.color}12`, color: r.color }}>{r.type}</span>
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                    </div>
+                </>
+            )}
+
             {/* ── Notification dropdown (fixed, anchored to bell button) ── */}
             {showNotif && (
                 <>
@@ -735,8 +752,7 @@ const S = {
     hero: {
         position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 45%, #1e40af 100%)',
-        padding: 'calc(var(--navbar-height) + 20px) 32px 20px',
-        marginBottom: 20,
+        padding: 'calc(var(--navbar-height) + 20px) 32px 24px',
     },
     heroGlow: { position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(99,102,241,0.18)', filter: 'blur(60px)', pointerEvents: 'none' },
     heroContent: { display: 'flex', alignItems: 'center', gap: 22, position: 'relative', zIndex: 1 },
@@ -865,12 +881,14 @@ const S = {
     modalClose: { width: 30, height: 30, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' },
     modalBody: { padding: '16px 20px 20px', maxHeight: '65vh', overflowY: 'auto' },
 
-    /* Search (inside hero) */
-    heroSearchRow: { marginTop: 18, display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 10 },
-    heroSearchBox: { display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 12, padding: '10px 16px', backdropFilter: 'blur(8px)', transition: 'border-color 0.15s, background 0.15s' },
-    heroSearchInput: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.84rem', color: 'white', minWidth: 0 },
-    heroSearchClear: { width: 20, height: 20, borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 },
-    searchDropdown: { position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: 'white', borderRadius: 14, border: '1.5px solid #e2e8f0', boxShadow: '0 16px 48px rgba(15,23,42,0.22)', overflow: 'hidden', zIndex: 300 },
+    /* Search strip */
+    searchStrip: { background: 'white', borderBottom: '1px solid #e8edf5', padding: '10px 28px', display: 'flex', justifyContent: 'center', boxShadow: '0 2px 8px rgba(15,23,42,0.05)' },
+    searchInner: { width: '100%', maxWidth: 560 },
+    searchBox: { display: 'flex', alignItems: 'center', gap: 10, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '9px 14px', transition: 'border-color 0.15s, box-shadow 0.15s' },
+    searchInput: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.84rem', color: 'var(--text-primary)', minWidth: 0 },
+    searchClear: { width: 22, height: 22, borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#94a3b8', flexShrink: 0 },
+    searchHint: { fontSize: '0.65rem', color: '#94a3b8', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 5, padding: '2px 6px', flexShrink: 0, fontFamily: 'monospace' },
+    searchDropdown: { background: 'white', borderRadius: 14, border: '1.5px solid #e2e8f0', boxShadow: '0 16px 48px rgba(15,23,42,0.18)', overflow: 'hidden', maxHeight: 360, overflowY: 'auto' },
     searchResultCount: { padding: '8px 14px 4px', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' },
     searchResultItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' },
     searchResultIcon: { width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0 },
