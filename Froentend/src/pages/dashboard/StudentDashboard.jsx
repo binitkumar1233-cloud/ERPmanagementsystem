@@ -241,58 +241,58 @@ export default function StudentDashboard() {
                         <button style={S.heroLogoutBtn} onClick={logout}><LogOut size={14} /> Logout</button>
                     </div>
                 </div>
-                <div style={S.heroDate}>{today}</div>
-            </div>
-
-            {/* ── Search Bar ── */}
-            <div style={S.searchWrap}>
-                <div ref={searchRef} style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
-                    <div style={{ ...S.searchBox, boxShadow: showSearchResults && searchQuery ? '0 0 0 2px #2563eb' : S.searchBox.boxShadow }}>
-                        <Search size={15} color={searchQuery ? '#2563eb' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
-                        <input
-                            style={S.searchInput}
-                            placeholder="Search subjects, exams, fees, schedule…"
-                            value={searchQuery}
-                            onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
-                            onFocus={() => { if (searchQuery) setShowSearchResults(true); }}
-                        />
-                        {searchQuery && (
-                            <button style={S.searchClearBtn} onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}>
-                                <X size={12} />
-                            </button>
-                        )}
-                    </div>
-
-                    {showSearchResults && searchQuery && (
-                        <div style={S.searchDropdown}>
-                            {searchResults.length === 0 ? (
-                                <div style={S.searchEmpty}>
-                                    <Search size={18} color="#cbd5e1" />
-                                    <span>No results for <strong>"{searchQuery}"</strong></span>
-                                </div>
-                            ) : (
-                                <>
-                                    <div style={S.searchResultCount}>{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</div>
-                                    {searchResults.map((r, i) => (
-                                        <button key={i} style={S.searchResultItem} onClick={r.action}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                        >
-                                            <div style={{ ...S.searchResultIcon, background: `${r.color}15`, color: r.color }}>
-                                                <r.Icon size={13} />
-                                            </div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={S.searchResultLabel}>{r.label}</div>
-                                                <div style={S.searchResultSub}>{r.sub}</div>
-                                            </div>
-                                            <span style={{ ...S.searchResultBadge, background: `${r.color}12`, color: r.color }}>{r.type}</span>
-                                        </button>
-                                    ))}
-                                </>
+                {/* ── Search Bar (inside hero) ── */}
+                <div style={S.heroSearchRow}>
+                    <div ref={searchRef} style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
+                        <div style={S.heroSearchBox}>
+                            <Search size={15} color={searchQuery ? '#93c5fd' : 'rgba(255,255,255,0.45)'} style={{ flexShrink: 0 }} />
+                            <input
+                                style={S.heroSearchInput}
+                                placeholder="Search subjects, exams, fees, schedule…"
+                                value={searchQuery}
+                                onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+                                onFocus={() => { if (searchQuery) setShowSearchResults(true); }}
+                            />
+                            {searchQuery && (
+                                <button style={S.heroSearchClear} onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}>
+                                    <X size={12} />
+                                </button>
                             )}
                         </div>
-                    )}
+
+                        {showSearchResults && searchQuery && (
+                            <div style={S.searchDropdown}>
+                                {searchResults.length === 0 ? (
+                                    <div style={S.searchEmpty}>
+                                        <Search size={18} color="#cbd5e1" />
+                                        <span>No results for <strong>"{searchQuery}"</strong></span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={S.searchResultCount}>{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</div>
+                                        {searchResults.map((r, i) => (
+                                            <button key={i} style={S.searchResultItem} onClick={r.action}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                <div style={{ ...S.searchResultIcon, background: `${r.color}15`, color: r.color }}>
+                                                    <r.Icon size={13} />
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={S.searchResultLabel}>{r.label}</div>
+                                                    <div style={S.searchResultSub}>{r.sub}</div>
+                                                </div>
+                                                <span style={{ ...S.searchResultBadge, background: `${r.color}12`, color: r.color }}>{r.type}</span>
+                                            </button>
+                                        ))}
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                <div style={S.heroDate}>{today}</div>
             </div>
 
             {/* ── Main 3-col Grid ── */}
@@ -865,12 +865,12 @@ const S = {
     modalClose: { width: 30, height: 30, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' },
     modalBody: { padding: '16px 20px 20px', maxHeight: '65vh', overflowY: 'auto' },
 
-    /* Search */
-    searchWrap: { padding: '0 28px 14px', display: 'flex', justifyContent: 'center' },
-    searchBox: { display: 'flex', alignItems: 'center', gap: 10, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', boxShadow: '0 1px 6px rgba(15,23,42,0.06)', transition: 'box-shadow 0.15s' },
-    searchInput: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.84rem', color: 'var(--text-primary)', minWidth: 0 },
-    searchClearBtn: { width: 20, height: 20, borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', flexShrink: 0 },
-    searchDropdown: { position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'white', borderRadius: 12, border: '1.5px solid #e2e8f0', boxShadow: '0 12px 40px rgba(15,23,42,0.14)', overflow: 'hidden', zIndex: 200 },
+    /* Search (inside hero) */
+    heroSearchRow: { marginTop: 18, display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 10 },
+    heroSearchBox: { display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 12, padding: '10px 16px', backdropFilter: 'blur(8px)', transition: 'border-color 0.15s, background 0.15s' },
+    heroSearchInput: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.84rem', color: 'white', minWidth: 0 },
+    heroSearchClear: { width: 20, height: 20, borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 },
+    searchDropdown: { position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: 'white', borderRadius: 14, border: '1.5px solid #e2e8f0', boxShadow: '0 16px 48px rgba(15,23,42,0.22)', overflow: 'hidden', zIndex: 300 },
     searchResultCount: { padding: '8px 14px 4px', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' },
     searchResultItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' },
     searchResultIcon: { width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0 },
