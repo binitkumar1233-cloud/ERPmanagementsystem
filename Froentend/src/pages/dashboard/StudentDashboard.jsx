@@ -345,7 +345,7 @@ export default function StudentDashboard() {
                             ))}
                         </div>
                         {dueFees > 0 && (
-                            <button style={S.payNowBtn} onClick={() => navigate('/fees')}>
+                            <button style={S.payNowBtn} onClick={() => setModal('fees')}>
                                 <CreditCard size={14} /> Pay Now — ₹{dueFees.toLocaleString()}
                             </button>
                         )}
