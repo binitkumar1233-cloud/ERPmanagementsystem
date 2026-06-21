@@ -1,4 +1,4 @@
-import { useContext, useState, useRef, useCallback } from 'react';
+import { useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -9,6 +9,7 @@ import {
     TrendingUp, CreditCard, FileText, ChevronRight,
     MapPin, Phone, Mail, Shield, ArrowUpRight, Star,
     BookMarked, Activity, AlertCircle, CheckCircle, X,
+    Search,
 } from 'lucide-react';
 
 /* ── Mock data ── */
@@ -71,6 +72,19 @@ export default function StudentDashboard() {
     const bellRef = useRef(null);
     const [modal, setModal] = useState(null); // 'timetable' | 'exams' | 'results' | 'fees'
     const [payingFee, setPayingFee] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const searchRef = useRef(null);
+
+    useEffect(() => {
+        const handler = e => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setShowSearchResults(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     const handleBellClick = useCallback(() => {
         if (bellRef.current) {
@@ -135,6 +149,50 @@ export default function StudentDashboard() {
         { label: 'Result History',     icon: BarChart2,  color: '#dc2626', bg: 'rgba(220,38,38,0.10)', action: () => setModal('results')     },
     ];
 
+    const searchResults = (() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return [];
+        const hits = [];
+
+        SUBJECTS.forEach(s => {
+            if (s.name.toLowerCase().includes(q) || s.grade.toLowerCase().includes(q)) {
+                hits.push({ type: 'Subject', label: s.name, sub: `${s.marks}/100 · Grade ${s.grade} · Attendance ${s.attendance}%`, color: s.color, Icon: BookOpen, action: () => { setActiveTab('marks'); setSearchQuery(''); setShowSearchResults(false); } });
+            }
+        });
+
+        TIMETABLE.forEach(t => {
+            if (t.subject.toLowerCase().includes(q) || t.type.toLowerCase().includes(q) || t.room.toLowerCase().includes(q)) {
+                hits.push({ type: 'Schedule', label: t.subject, sub: `${t.time} · ${t.room || 'Break'} · ${t.type}`, color: t.color, Icon: Clock, action: () => { setModal('timetable'); setSearchQuery(''); setShowSearchResults(false); } });
+            }
+        });
+
+        EXAMS.forEach(ex => {
+            if (ex.subject.toLowerCase().includes(q) || ex.type.toLowerCase().includes(q)) {
+                hits.push({ type: 'Exam', label: ex.subject, sub: `${ex.date} · ${ex.type}`, color: ex.color, Icon: FileText, action: () => { setModal('exams'); setSearchQuery(''); setShowSearchResults(false); } });
+            }
+        });
+
+        FEE_SCHEDULE.forEach(f => {
+            if (f.label.toLowerCase().includes(q)) {
+                hits.push({ type: 'Fee', label: f.label, sub: `₹${f.amount.toLocaleString()} · ${f.paid ? 'Paid' : 'Due'} · ${f.date}`, color: f.paid ? '#059669' : '#dc2626', Icon: CreditCard, action: () => { setModal('fees'); setSearchQuery(''); setShowSearchResults(false); } });
+            }
+        });
+
+        NOTIFICATIONS.forEach(n => {
+            if (n.text.toLowerCase().includes(q)) {
+                hits.push({ type: 'Alert', label: n.text, sub: n.time, color: n.color, Icon: Bell, action: () => { setShowNotif(true); setSearchQuery(''); setShowSearchResults(false); } });
+            }
+        });
+
+        QUICK_ACTIONS.forEach(a => {
+            if (a.label.toLowerCase().includes(q)) {
+                hits.push({ type: 'Action', label: a.label, sub: 'Quick Action', color: a.color, Icon: a.icon, action: () => { a.action(); setSearchQuery(''); setShowSearchResults(false); } });
+            }
+        });
+
+        return hits;
+    })();
+
     return (
         <div className="erp-page" style={{ padding: 0 }}>
 
@@ -184,6 +242,57 @@ export default function StudentDashboard() {
                     </div>
                 </div>
                 <div style={S.heroDate}>{today}</div>
+            </div>
+
+            {/* ── Search Bar ── */}
+            <div style={S.searchWrap}>
+                <div ref={searchRef} style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
+                    <div style={{ ...S.searchBox, boxShadow: showSearchResults && searchQuery ? '0 0 0 2px #2563eb' : S.searchBox.boxShadow }}>
+                        <Search size={15} color={searchQuery ? '#2563eb' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
+                        <input
+                            style={S.searchInput}
+                            placeholder="Search subjects, exams, fees, schedule…"
+                            value={searchQuery}
+                            onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+                            onFocus={() => { if (searchQuery) setShowSearchResults(true); }}
+                        />
+                        {searchQuery && (
+                            <button style={S.searchClearBtn} onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}>
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+
+                    {showSearchResults && searchQuery && (
+                        <div style={S.searchDropdown}>
+                            {searchResults.length === 0 ? (
+                                <div style={S.searchEmpty}>
+                                    <Search size={18} color="#cbd5e1" />
+                                    <span>No results for <strong>"{searchQuery}"</strong></span>
+                                </div>
+                            ) : (
+                                <>
+                                    <div style={S.searchResultCount}>{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</div>
+                                    {searchResults.map((r, i) => (
+                                        <button key={i} style={S.searchResultItem} onClick={r.action}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <div style={{ ...S.searchResultIcon, background: `${r.color}15`, color: r.color }}>
+                                                <r.Icon size={13} />
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={S.searchResultLabel}>{r.label}</div>
+                                                <div style={S.searchResultSub}>{r.sub}</div>
+                                            </div>
+                                            <span style={{ ...S.searchResultBadge, background: `${r.color}12`, color: r.color }}>{r.type}</span>
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* ── Main 3-col Grid ── */}
@@ -755,4 +864,18 @@ const S = {
     modalTitle: { flex: 1, fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)' },
     modalClose: { width: 30, height: 30, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)' },
     modalBody: { padding: '16px 20px 20px', maxHeight: '65vh', overflowY: 'auto' },
+
+    /* Search */
+    searchWrap: { padding: '0 28px 14px', display: 'flex', justifyContent: 'center' },
+    searchBox: { display: 'flex', alignItems: 'center', gap: 10, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', boxShadow: '0 1px 6px rgba(15,23,42,0.06)', transition: 'box-shadow 0.15s' },
+    searchInput: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.84rem', color: 'var(--text-primary)', minWidth: 0 },
+    searchClearBtn: { width: 20, height: 20, borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--text-muted)', flexShrink: 0 },
+    searchDropdown: { position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'white', borderRadius: 12, border: '1.5px solid #e2e8f0', boxShadow: '0 12px 40px rgba(15,23,42,0.14)', overflow: 'hidden', zIndex: 200 },
+    searchResultCount: { padding: '8px 14px 4px', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' },
+    searchResultItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' },
+    searchResultIcon: { width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0 },
+    searchResultLabel: { fontSize: '0.79rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+    searchResultSub: { fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+    searchResultBadge: { fontSize: '0.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 5, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em' },
+    searchEmpty: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.8rem' },
 };
