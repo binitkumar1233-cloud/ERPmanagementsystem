@@ -171,8 +171,8 @@ router.post('/google', async (req, res, next) => {
         // Verify the Firebase ID token server-side — never trust uid/email from the client
         let firebasePayload;
         try {
-            const admin = require('../config/firebaseAdmin');
-            firebasePayload = await admin.auth().verifyIdToken(idToken);
+            const { auth } = require('../config/firebaseAdmin');
+            firebasePayload = await auth().verifyIdToken(idToken);
         } catch {
             return res.status(401).json({ success: false, message: 'Invalid or expired Firebase token' });
         }
