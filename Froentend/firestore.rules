@@ -44,6 +44,28 @@ service cloud.firestore {
       allow write: if isAuth();
     }
 
+    // Admin users — only authenticated users (admins) can manage this collection.
+    match /adminUsers/{docId} {
+      allow read:           if isAuth();
+      allow create, update: if isAuth();
+      allow delete:         if isAuth();
+    }
+
+    // Fee structures — authenticated users can manage.
+    match /feeStructures/{docId} {
+      allow read:           if isAuth();
+      allow create, update: if isAuth();
+      allow delete:         if isAuth();
+    }
+
+    // Fee payments — written by students after Razorpay success.
+    match /feePayments/{docId} {
+      allow read:   if isAuth();
+      allow create: if isAuth();
+      allow update: if false;
+      allow delete: if false;
+    }
+
     // Block everything else by default.
     match /{document=**} {
       allow read, write: if false;
