@@ -31,18 +31,16 @@ connectDB();
 const app = express();
 
 /* ── Core Middleware ── */
+const ALLOWED_ORIGINS = new Set([
+    'https://school-and-college-erp-manga.web.app',
+    'https://school-and-college-erp-manga.firebaseapp.com',
+    ...(process.env.CLIENT_URL || '').split(',').map(s => s.trim()).filter(Boolean),
+]);
 app.use(cors({
     origin: (origin, cb) => {
-        // Allow requests with no origin (curl, Postman, mobile apps)
-        if (!origin) return cb(null, true);
-        // Allow any localhost port for local development
-        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true);
-        // Allow Firebase Hosting domains (*.web.app, *.firebaseapp.com)
-        if (/^https:\/\/[a-zA-Z0-9-]+\.web\.app$/.test(origin)) return cb(null, true);
-        if (/^https:\/\/[a-zA-Z0-9-]+\.firebaseapp\.com$/.test(origin)) return cb(null, true);
-        // Allow configured production CLIENT_URL(s)
-        const allowed = (process.env.CLIENT_URL || '').split(',').map(s => s.trim()).filter(Boolean);
-        if (allowed.some(o => origin.startsWith(o))) return cb(null, true);
+        if (!origin) return cb(null, true); // curl / Postman / mobile
+        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true); // local dev
+        if (ALLOWED_ORIGINS.has(origin)) return cb(null, true);
         cb(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
@@ -95,5 +93,4 @@ httpServer.listen(PORT, () => {
     console.log(`\n🚀  EduManage API running on http://localhost:${PORT}`);
     console.log(`⚡  Socket.io real-time enabled`);
     console.log(`    Env: ${process.env.NODE_ENV}`);
-    console.log(`    DB:  ${process.env.MONGO_URI}\n`);
 });

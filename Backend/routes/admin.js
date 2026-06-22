@@ -11,7 +11,7 @@ const log = require('../middleware/logger');
 router.use(protect);
 
 /* GET /api/admin/dashboard — overview stats */
-router.get('/dashboard', async (req, res, next) => {
+router.get('/dashboard', adminOnly, async (req, res, next) => {
     try {
         const [admins, students, teachers, courses, recentLogs] = await Promise.all([
             User.countDocuments({ status: 'Active' }),
@@ -69,7 +69,7 @@ router.delete('/users/:id', adminOnly, log('Deleted admin user', 'Admin'), async
 
 /* ── Fee Structures ── */
 
-router.get('/fee-structures', async (req, res, next) => {
+router.get('/fee-structures', adminOnly, async (req, res, next) => {
     try {
         const structures = await FeeStructure.find().sort({ year: -1 });
         res.json({ success: true, count: structures.length, data: structures });
@@ -100,7 +100,7 @@ router.delete('/fee-structures/:id', adminOnly, log('Deleted fee structure', 'Fe
 
 /* ── Activity Logs ── */
 
-router.get('/logs', async (req, res, next) => {
+router.get('/logs', adminOnly, async (req, res, next) => {
     try {
         const { module, severity, user, from, to, page = 1, limit = 50 } = req.query;
         const filter = {};

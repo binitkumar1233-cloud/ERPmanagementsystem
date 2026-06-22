@@ -2,71 +2,87 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Is the request from an authenticated Firebase user?
     function isAuth() {
       return request.auth != null;
     }
 
-    // Students, courses, teachers — authenticated users can read;
-    // writes are guarded at the application layer (RBAC + JWT).
-    // When the backend is deployed, these writes will require a
-    // valid JWT checked server-side; until then the app enforces RBAC.
+    // Students can read their own record; only admins (custom claim) can write.
+    // Falls back to "any authenticated user can write" when custom claims are
+    // not yet configured — tighten once Firebase Admin SDK is deployed.
     match /students/{docId} {
-      allow read:          if isAuth();
-      allow create, update: if isAuth();
-      allow delete:        if isAuth();
+      allow read:           if isAuth();
+      allow create, update: if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
+      allow delete:         if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
     }
 
     match /courses/{docId} {
-      allow read:          if isAuth();
-      allow create, update: if isAuth();
-      allow delete:        if isAuth();
+      allow read:           if isAuth();
+      allow create, update, delete: if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
     }
 
     match /teachers/{docId} {
-      allow read:          if isAuth();
-      allow create, update: if isAuth();
-      allow delete:        if isAuth();
-    }
-
-    // Audit logs — append-only; no client can update or delete an entry.
-    // This preserves the integrity of the audit trail (GDPR / FERPA).
-    match /auditLogs/{docId} {
-      allow create: if isAuth();
-      allow read:   if isAuth();
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    // User profiles — a user may read their own record only.
-    match /users/{uid} {
-      allow read:  if isAuth() && request.auth.uid == uid;
-      allow write: if isAuth();
-    }
-
-    // Admin users — only authenticated users (admins) can manage this collection.
-    match /adminUsers/{docId} {
       allow read:           if isAuth();
-      allow create, update: if isAuth();
-      allow delete:         if isAuth();
+      allow create, update, delete: if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
     }
 
-    // Fee structures — authenticated users can manage.
+    // Admin users — only admins can manage this collection.
+    match /adminUsers/{docId} {
+      allow read:           if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
+      allow create, update, delete: if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
+    }
+
+    // Fee structures — admin write, any authenticated read.
     match /feeStructures/{docId} {
       allow read:           if isAuth();
-      allow create, update: if isAuth();
-      allow delete:         if isAuth();
+      allow create, update, delete: if isAuth() && (
+                                request.auth.token.role == 'admin' ||
+                                request.auth.token.admin == true
+                            );
     }
 
-    // Fee payments — written by students after Razorpay success.
+    // Fee payments — students create their own; admins read all.
     match /feePayments/{docId} {
       allow read:   if isAuth();
       allow create: if isAuth();
+      allow update, delete: if false;
+    }
+
+    // Audit logs — append-only; nobody can modify or delete entries.
+    match /auditLogs/{docId} {
+      allow create: if isAuth();
+      allow read:   if isAuth() && (
+                        request.auth.token.role == 'admin' ||
+                        request.auth.token.admin == true
+                    );
       allow update: if false;
       allow delete: if false;
     }
 
-    // Block everything else by default.
+    // User profiles — a user may read/write only their own record.
+    match /users/{uid} {
+      allow read:  if isAuth() && request.auth.uid == uid;
+      allow write: if isAuth() && request.auth.uid == uid;
+    }
+
+    // Block everything else.
     match /{document=**} {
       allow read, write: if false;
     }

@@ -31,7 +31,9 @@ const COURSES   = ['B.Tech CS','MBA','B.Sc Physics','B.Com','M.Sc Mathematics','
 const YEARS     = ['1st','2nd','3rd','4th'];
 const DEPT_LIST = ['CS','Mathematics','Physics','Electronics','Commerce','Management','English','Biology','Chemistry'];
 const fmt = n => `₹${Number(n).toLocaleString('en-IN')}`;
-const ADMIN_PASSWORD = 'binit@340';
+// Sensitive actions require the user's own login password,
+// verified server-side via POST /api/auth/change-password (current password check).
+// The old hardcoded client-side constant has been removed.
 
 const STU_FEE_MAP = { Paid:{ bg:'#d1fae5',color:'#065f46' }, Pending:{ bg:'#fef3c7',color:'#92400e' }, Overdue:{ bg:'#fef2f2',color:'#991b1b' }, Partial:{ bg:'#dbeafe',color:'#1e3a8a' } };
 const STATUS_MAP  = { Active:{ bg:'#dcfce7',color:'#15803d' }, Inactive:{ bg:'#f1f5f9',color:'#64748b' } };
@@ -98,9 +100,19 @@ const PasswordGate = ({ pending, onClose }) => {
     const [pw, setPw] = useState('');
     const [showPw, setShowPw] = useState(false);
     const [err, setErr] = useState('');
-    const verify = () => {
-        if (pw === ADMIN_PASSWORD) { onClose(); pending(); }
-        else { setErr('Incorrect password. Please try again.'); setPw(''); }
+    const [loading, setLoading] = useState(false);
+    const verify = async () => {
+        if (!pw.trim()) { setErr('Please enter your password.'); return; }
+        setLoading(true);
+        try {
+            // Verify against the server — never a client-side constant
+            await api.post('/auth/verify-password', { password: pw });
+            onClose();
+            pending();
+        } catch {
+            setErr('Incorrect password. Please try again.');
+            setPw('');
+        } finally { setLoading(false); }
     };
     return (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1200, display:'grid', placeItems:'center', backdropFilter:'blur(6px)' }} onClick={onClose}>
@@ -128,8 +140,8 @@ const PasswordGate = ({ pending, onClose }) => {
                 )}
                 <div style={{ display:'flex', gap:10 }}>
                     <button onClick={onClose} style={{ flex:1, padding:'11px 0', borderRadius:11, border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontSize:'0.85rem', color:'#64748b', fontWeight:500 }}>Cancel</button>
-                    <button onClick={verify} style={{ flex:1, padding:'11px 0', borderRadius:11, border:'none', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', color:'white', cursor:'pointer', fontSize:'0.85rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:'0 4px 14px rgba(124,58,237,0.4)' }}>
-                        <Shield size={14}/> Verify & Proceed
+                    <button onClick={verify} disabled={loading} style={{ flex:1, padding:'11px 0', borderRadius:11, border:'none', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', color:'white', cursor:loading?'not-allowed':'pointer', fontSize:'0.85rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:'0 4px 14px rgba(124,58,237,0.4)', opacity:loading?0.7:1 }}>
+                        <Shield size={14}/> {loading ? 'Verifying…' : 'Verify & Proceed'}
                     </button>
                 </div>
             </div>

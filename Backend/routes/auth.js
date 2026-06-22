@@ -49,7 +49,9 @@ router.post('/login/student', async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
         const bcrypt = require('bcryptjs');
-        const match = await bcrypt.compare(password, student.password).catch(() => password === student.password);
+        let match = false;
+        try { match = await bcrypt.compare(password, student.password || ''); } catch { /* deny */ }
+
         if (!match)
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
@@ -73,6 +75,19 @@ router.post('/login/student', async (req, res, next) => {
 /* GET /api/auth/me */
 router.get('/me', protect, (req, res) => {
     res.json({ success: true, data: req.user });
+});
+
+/* POST /api/auth/verify-password — confirm the current user's password without changing it */
+router.post('/verify-password', protect, async (req, res, next) => {
+    try {
+        const { password } = req.body;
+        if (!password)
+            return res.status(400).json({ success: false, message: 'Password is required' });
+        const user = await User.findById(req.user._id).select('+password');
+        if (!user || !(await user.matchPassword(password)))
+            return res.status(401).json({ success: false, message: 'Incorrect password' });
+        res.json({ success: true });
+    } catch (err) { next(err); }
 });
 
 /* POST /api/auth/change-password */
@@ -103,7 +118,7 @@ router.post('/forgot-password', async (req, res, next) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ success: false, message: 'No account with that email' });
 
-        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const code = crypto.randomInt(100000, 1000000).toString();
         user.resetCode = code;
         user.resetCodeExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
         await user.save({ validateBeforeSave: false });
@@ -146,20 +161,34 @@ router.post('/reset-password', async (req, res, next) => {
     } catch (err) { next(err); }
 });
 
-/* POST /api/auth/google — Google OAuth: find-or-create admin user, return backend JWT */
+/* POST /api/auth/google — Google OAuth: verify Firebase ID token, then find-or-create admin */
 router.post('/google', async (req, res, next) => {
     try {
-        const { uid, name, email, photo } = req.body;
-        if (!uid || !email)
-            return res.status(400).json({ success: false, message: 'uid and email are required' });
+        const { idToken, photo } = req.body;
+        if (!idToken)
+            return res.status(400).json({ success: false, message: 'idToken is required' });
+
+        // Verify the Firebase ID token server-side — never trust uid/email from the client
+        let firebasePayload;
+        try {
+            const admin = require('../config/firebaseAdmin');
+            firebasePayload = await admin.auth().verifyIdToken(idToken);
+        } catch {
+            return res.status(401).json({ success: false, message: 'Invalid or expired Firebase token' });
+        }
+
+        const { uid, email, name } = firebasePayload;
+        if (!email)
+            return res.status(400).json({ success: false, message: 'Email not present in token' });
 
         let user = await User.findOne({ email });
         if (!user) {
             user = await User.create({
                 name: name || email.split('@')[0],
                 email,
+                firebaseUid: uid,
                 password: crypto.randomBytes(24).toString('hex'),
-                role: 'Admin',
+                role: 'Viewer',          // safe default — super admin promotes manually
                 dept: 'Management',
                 status: 'Active',
             });
