@@ -13,13 +13,16 @@ import {
 } from 'lucide-react';
 
 /* ─────────────────────────────── NORMALIZERS ─────────────────────────────── */
-const fmtDate = d => d ? new Date(d).toLocaleString('en-IN', { dateStyle:'short', timeStyle:'short' }) : 'Never';
-const normUser = d => ({ id:d._id, shortId:d._id.slice(-6).toUpperCase(), name:d.name, email:d.email, role:d.role, dept:d.dept||'Management', status:d.status, lastLogin:fmtDate(d.lastLogin), created:d.createdAt?.slice(0,10)||'' });
+// Handles MongoDB ISO strings, Firestore Timestamps, JS Dates, and null/undefined
+const toJS = d => !d ? null : (d.toDate ? d.toDate() : new Date(d));
+const fmtDate  = d => { const dt = toJS(d); return dt && !isNaN(dt) ? dt.toLocaleString('en-IN', { dateStyle:'short', timeStyle:'short' }) : 'Never'; };
+const fmtShort = d => { const dt = toJS(d); return dt && !isNaN(dt) ? dt.toISOString().slice(0,10) : ''; };
+const normUser = d => ({ id:d._id, shortId:(d._id||'').slice(-6).toUpperCase(), name:d.name, email:d.email, role:d.role, dept:d.dept||'Management', status:d.status, lastLogin:fmtDate(d.lastLogin), created:fmtShort(d.createdAt) });
 const normStu  = d => ({ id:d._id, shortId:d.studentId||`S${d._id.slice(-5)}`, name:d.name, email:d.email||'', phone:d.phone||'', course:d.course, year:d.year, fees:d.fees, status:d.status });
 const normTch  = d => ({ id:d._id, shortId:d.teacherId||`T${d._id.slice(-5)}`, name:d.name, email:d.email||'', phone:d.phone||'', dept:d.dept, designation:d.designation, status:d.status });
 const normCrs  = d => ({ id:d._id, shortId:d.courseId||`C${d._id.slice(-5)}`, name:d.name, code:d.code, dept:d.dept, seats:d.seats, enrolled:d.enrolled||0, duration:d.duration||'3 years', fees:d.fees, status:d.status });
 const normFee  = d => ({ id:d._id, course:d.course, tuition:d.tuition||0, lab:d.lab||0, library:d.library||0, sports:d.sports||0, total:d.total||0, year:d.year, status:d.status });
-const normLog  = d => ({ id:d._id, user:d.userName||'System', action:d.action, module:d.module, time:fmtDate(d.createdAt), ip:d.ip||'—', severity:d.severity||'low' });
+const normLog  = d => ({ id:d._id||(d.id||''), user:d.userName||'System', action:d.action, module:d.module, time:fmtDate(d.createdAt||d.timestamp), ip:d.ip||'—', severity:d.severity||'low' });
 
 /* ─────────────────────────────── CONSTANTS ─────────────────────────────── */
 const ROLES     = ['Super Admin','Admin','Editor','Viewer'];
